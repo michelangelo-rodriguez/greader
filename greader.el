@@ -59,6 +59,13 @@
   nil
   "greader customization")
 (defcustom
+  greader-backends
+  ()
+  "A list of functions that are back-ends for greader."
+  :tag "greader back-ends"
+  :type '(repeat list))
+
+(defcustom
   greader-auto-tired-mode-time
   "22"
   "specifies the hour when tired mode will be activated automatically."
