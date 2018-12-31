@@ -6,7 +6,7 @@ nil
   "back-end of espeak for greader."
   :group 'greader
   )
-
+;;; customization
 (defcustom
   greader-espeak-language
   "en"
@@ -21,6 +21,14 @@ espeak --list-languages
   "Specifies the rate os speech in words per minute."
   :tag "greader espeak rate"
   :type 'integer)
+(defcustom
+  greader-espeak-executable-name
+(greader-espeak--find-executable)
+"Path of espeak executable.
+this variable determines authomatically if espeak is present in your PATH environment, then if this variable is nil, it means that you must first install espeak."
+:tag "espeak executable"
+:type 'string)
+;;; code
 (defun greader-espeak-set-rate
     (&optional rate)
   "returns a string suitable for setting espeak rate."
@@ -34,3 +42,8 @@ espeak --list-languages
       
       (concat "-V " greader-espeak-language)
     (concat "-V " lang)))
+(defun greader-espeak--find-executable
+    ()
+  "tries to find espeak executable in PATH.
+If it's present, returns absolute path of espeak, else returns nil."
+(locate-file "espeak" exec-path))
