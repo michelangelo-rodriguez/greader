@@ -21,3 +21,9 @@ espeak --list-languages
   "Specifies the rate os speech in words per minute."
   :tag "greader espeak rate"
   :type 'integer)
+(defun greader-espeak-set-rate
+    (&optional rate)
+  "returns a string suitable for setting espeak rate."
+  (if (not rate)
+      (concat "-s" (number-to-string greader-espeak-rate))
+    (concat "-s" (number-to-string rate))))
