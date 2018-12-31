@@ -27,3 +27,10 @@ espeak --list-languages
   (if (not rate)
       (concat "-s" (number-to-string greader-espeak-rate))
     (concat "-s" (number-to-string rate))))
+(defun greader-espeak-set-language
+    (&optional lang)
+  "returns the appropriate string to pass to espeak in order to set the language appropriately"
+  (if (not lang)
+      
+      (concat "-V " greader-espeak-language)
+    (concat "-V " lang)))
