@@ -28,7 +28,13 @@ espeak --list-languages
 this variable determines authomatically if espeak is present in your PATH environment, then if this variable is nil, it means that you must first install espeak."
 :tag "espeak executable"
 :type 'string)
-
+(defcustom
+  greader-espeak-punctuation
+  nil
+  "espeak punctuation switch."
+  :tag "espeak punctuation"
+  :type 'boolean)
+  
 ;;; code
 (defun greader-espeak-set-rate
     (&optional rate)
