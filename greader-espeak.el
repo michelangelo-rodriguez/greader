@@ -1,8 +1,10 @@
-;;; greader-espeak --- espeak back-end for greader -*- lexical-binding: t; -*-
-
 ;Copyright (C) 2019 by 
 
-					;Copyright (C) 2018 by Michelangelo Rodriguez
+;;; greader-espeak --- espeak back-end for greader -*- lexical-binding: t; -*-
+
+;Copyright (C) 2019 by Michelangelo Rodriguez
+
+
 (defgroup greader-espeak-backend
 nil
   "back-end of espeak for greader."
@@ -82,4 +84,6 @@ this function accepts only nil or t."
     ('punctuation
      (if (not arg)
 	 (greader-espeak-set-punctuation)
-       (greader-espeak-set-punctuation arg)))))
+       (greader-espeak-set-punctuation arg)))
+    (command-not-implemented
+     'not-implemented)))
