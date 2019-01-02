@@ -28,6 +28,7 @@ espeak --list-languages
 this variable determines authomatically if espeak is present in your PATH environment, then if this variable is nil, it means that you must first install espeak."
 :tag "espeak executable"
 :type 'string)
+
 ;;; code
 (defun greader-espeak-set-rate
     (&optional rate)
@@ -47,3 +48,18 @@ this variable determines authomatically if espeak is present in your PATH enviro
   "tries to find espeak executable in PATH.
 If it's present, returns absolute path of espeak, else returns nil."
 (locate-file "espeak" exec-path))
+(defun greader-espeak (command &optional arg &rest args)
+  "back-end main function of greader-espeak."
+  (pcase command
+    ('executable
+     (if greader-espeak-executable-name
+	 greader-espeak-executable-name
+       nil))
+    ('lang
+     (if (not arg)
+	 (greader-espeak-set-language)
+       (greader-espeak-set-language arg)))
+    ('rate
+     (if (not arg)
+       (greader-espeak-set-rate)
+       (greader-espeak-set-rate arg)))))
