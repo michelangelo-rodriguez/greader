@@ -54,6 +54,14 @@ this variable determines authomatically if espeak is present in your PATH enviro
   "tries to find espeak executable in PATH.
 If it's present, returns absolute path of espeak, else returns nil."
 (locate-file "espeak" exec-path))
+(defun greader-espeak-set-punctuation
+    (&optional switch)
+  "sets espeak punctuation on or off.
+this function accepts only nil or t."
+  (if switch
+      "--punct"
+    greader-espeak-punctuation))
+
 (defun greader-espeak (command &optional arg &rest args)
   "back-end main function of greader-espeak."
   (pcase command
