@@ -1,5 +1,7 @@
 ;;; greader-espeak --- espeak back-end for greader -*- lexical-binding: t; -*-
 
+;Copyright (C) 2019 by 
+
 					;Copyright (C) 2018 by Michelangelo Rodriguez
 (defgroup greader-espeak-backend
 nil
@@ -75,5 +77,9 @@ this function accepts only nil or t."
        (greader-espeak-set-language arg)))
     ('rate
      (if (not arg)
-       (greader-espeak-set-rate)
-       (greader-espeak-set-rate arg)))))
+	 (greader-espeak-set-rate)
+       (greader-espeak-set-rate arg)))
+    ('punctuation
+     (if (not arg)
+	 (greader-espeak-set-punctuation)
+       (greader-espeak-set-punctuation arg)))))
