@@ -45,3 +45,11 @@
   "tries to find speech-dispatcher client using greader-speechd-executable as basename."
 (locate-file greader-speechd-executable exec-path))
 
+(defun greader-speechd-set-language
+    (&optional lang)
+  "sets language 'lang' for speech-dispatcher client.
+if lang is omitted, it looks in variable greader-speechd-language and retrieves the appropriate string used by spd-say or another client compatible."
+  (if (not lang)
+    (concat "-l " greader-speechd-language)
+    (concat "-l " lang)))
+
