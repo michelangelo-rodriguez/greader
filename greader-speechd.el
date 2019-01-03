@@ -35,11 +35,12 @@
   :type 'integer)
 (defcustom
   greader-speechd-punctuation
-  0
-  "punctuation level for speech-dispatcher client.
-(0 = none, 1 = some, 2 or > 2 all)"
+  "none"
+"punctuation level of speech-dispatcher client to speak.
+It must be one of the following:
+none, some, or all."
   :tag "speech-dispatcher punctuation level"
-  :type 'integer)
+  :type 'string)
 ;;; code
 (defun greader-speechd--find-executable ()
   "tries to find speech-dispatcher client using greader-speechd-executable as basename."
@@ -60,3 +61,19 @@ for further documentation, see the documentation for greader-speechd-rate variab
   (if (not rate)
       (concat "-r " (number-to-string greader-speechd-rate))
     (concat "-r " (number-to-string rate))))
+(defun greader-speechd-set-punctuation (&optional punct)
+  "returns a suitable parameter to pass to spd-say for setting punctuation leve.
+punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for all punctuation."
+(catch 'return
+  (cond
+   ((booleanp punct)
+    (if punct
+	(throw 'return (concat "-p all"))
+      (throw 'return (concat "-p none"))))
+   ((numberp punct)
+     (if (= punct 0)
+	 (throw 'return (concat "-p none")))
+     (if (= punct 1)
+	 (throw 'return (concat "-p some")))
+     (if (>= punct 2)
+	 (throw 'return (concat "-p all")))))))
