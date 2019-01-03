@@ -16,7 +16,7 @@
   :type 'string)
 (defcustom
   greader-speechd-executable-path
-  (greader-speechd-find-executable)
+  (greader-speechd--find-executable)
   "Path of speech-dispatcher client executable."
   :tag "speechd client executable path"
   :type 'string)
@@ -40,3 +40,8 @@
 (0 = none, 1 = some, 2 or > 2 all)"
   :tag "speech-dispatcher punctuation level"
   :type 'integer)
+;;; code
+(defun greader-speechd--find-executable ()
+  "tries to find speech-dispatcher client using greader-speechd-executable as basename."
+(locate-file greader-speechd-executable exec-path))
+
