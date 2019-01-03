@@ -33,3 +33,10 @@
 (From -100 to 100.)"
   :tag "speech-dispatcher rate"
   :type 'integer)
+(defcustom
+  greader-speechd-punctuation
+  0
+  "punctuation level for speech-dispatcher client.
+(0 = none, 1 = some, 2 or > 2 all)"
+  :tag "speech-dispatcher punctuation level"
+  :type 'integer)
