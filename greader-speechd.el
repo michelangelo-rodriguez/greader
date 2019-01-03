@@ -53,3 +53,10 @@ if lang is omitted, it looks in variable greader-speechd-language and retrieves 
     (concat "-l " greader-speechd-language)
     (concat "-l " lang)))
 
+(defun greader-speechd-set-rate
+    (&optional rate)
+  "returns parameter suitable for spd-say to set speech rate.
+for further documentation, see the documentation for greader-speechd-rate variable."
+  (if (not rate)
+      (concat "-r " (number-to-string greader-speechd-rate))
+    (concat "-r " (number-to-string rate))))
