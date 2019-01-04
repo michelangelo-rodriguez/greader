@@ -77,3 +77,22 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
 	 (throw 'return (concat "-p some")))
      (if (>= punct 2)
 	 (throw 'return (concat "-p all")))))))
+(defun greader-speechd (command &optional arg &rest ignore)
+  "greader speech-dispatcher back-end."
+  (pcase command
+    ('executable
+     greader-speechd-executable-path)
+    ('lang
+     (if (not arg)
+	 (greader-speechd-set-language)
+       (greader-speechd-set-language arg)))
+    ('rate
+     (if (not arg)
+	 (greader-speechd-set-rate)
+       (greader-speechd-set-rate arg)))
+    ('punct
+     (if (not arg)
+	 (greader-speechd-set-punctuation)
+       (greader-speechd-set-punctuation arg)))
+    (not-implemented
+     'not-implemented)))
