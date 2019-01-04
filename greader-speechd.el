@@ -77,6 +77,9 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
 	 (throw 'return (concat "-p some")))
      (if (>= punct 2)
 	 (throw 'return (concat "-p all")))))))
+(defun greader-speechd-stop ()
+  "stops speech-dispatcher client."
+  (start-process "speechd-client" nil greader-speechd-executable-path "-s"))
 (defun greader-speechd (command &optional arg &rest ignore)
   "greader speech-dispatcher back-end."
   (pcase command
@@ -94,5 +97,7 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
      (if (not arg)
 	 (greader-speechd-set-punctuation)
        (greader-speechd-set-punctuation arg)))
+    ('stop
+     (greader-speechd-stop))
     (not-implemented
      'not-implemented)))
