@@ -64,7 +64,17 @@
   "A list of functions that are back-ends for greader."
   :tag "greader back-ends"
   :type '(repeat function))
-
+(defcustom
+  greader-actual-backend
+  'greader-espeak
+  "greader back-end to use"
+  :tag "greader actual back-end"
+  :type
+  `(radio
+    ,@(mapcar
+       (lambda (backend)
+	 `(function-item ,backend))
+       greader-backends)))
 (defcustom
   greader-auto-tired-mode-time
   "22"
