@@ -68,15 +68,15 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
   (cond
    ((booleanp punct)
     (if punct
-	(throw 'return (concat "-p all"))
-      (throw 'return (concat "-p none"))))
+	(throw 'return (concat "-m all"))
+      (throw 'return (concat "-m none"))))
    ((numberp punct)
      (if (= punct 0)
-	 (throw 'return (concat "-p none")))
+	 (throw 'return (concat "-m none")))
      (if (= punct 1)
-	 (throw 'return (concat "-p some")))
+	 (throw 'return (concat "-m some")))
      (if (>= punct 2)
-	 (throw 'return (concat "-p all")))))))
+	 (throw 'return (concat "-m all")))))))
 (defun greader-speechd-stop ()
   "stops speech-dispatcher client."
   (start-process "speechd-client" nil greader-speechd-executable-path "-S"))
@@ -93,11 +93,13 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
      (if (not arg)
 	 (greader-speechd-set-rate)
        (greader-speechd-set-rate arg)))
-    ('punct
+    ('punctuation
      (if (not arg)
 	 (greader-speechd-set-punctuation)
        (greader-speechd-set-punctuation arg)))
     ('stop
      (greader-speechd-stop))
+    ('extra
+     "-w")
     (not-implemented
      'not-implemented)))
