@@ -16,7 +16,7 @@
   :type 'string)
 (defcustom
   greader-speechd-executable-path
-  (greader-speechd--find-executable)
+(locate-file greader-speechd-executable exec-path)
   "Path of speech-dispatcher client executable."
   :tag "speechd client executable path"
   :type 'string)
