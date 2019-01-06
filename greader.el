@@ -55,15 +55,15 @@
 (defvar greader-synth-process nil)
 
 (defgroup
-  Greader
+  greader
   nil
   "greader customization")
 (defcustom
   greader-backends
-  ()
+  '(greader-espeak greader-speechd)
   "A list of functions that are back-ends for greader."
   :tag "greader back-ends"
-  :type '(repeat list))
+  :type '(repeat function))
 
 (defcustom
   greader-auto-tired-mode-time
