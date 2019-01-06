@@ -1,11 +1,12 @@
-;Copyright (C) 2019 by 
-
 ;;; greader-espeak --- espeak back-end for greader -*- lexical-binding: t; -*-
+
+
+
 
 ;Copyright (C) 2019 by Michelangelo Rodriguez
 
 
-(defgroup greader-espeak-backend
+(defgroup greader-espeak
 nil
   "back-end of espeak for greader."
   :group 'greader
@@ -27,11 +28,11 @@ espeak --list-languages
   :type 'integer)
 (defcustom
   greader-espeak-executable-name
-(greader-espeak--find-executable)
-"Path of espeak executable.
+  (locate-file "espeak" exec-path)
+  "Path of espeak executable.
 this variable determines authomatically if espeak is present in your PATH environment, then if this variable is nil, it means that you must first install espeak."
-:tag "espeak executable"
-:type 'string)
+  :tag "espeak executable"
+  :type 'string)
 (defcustom
   greader-espeak-punctuation
   nil
