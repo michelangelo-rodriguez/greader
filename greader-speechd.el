@@ -103,3 +103,4 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
      "-w")
     (not-implemented
      'not-implemented)))
+(provide 'greader-speechd)
