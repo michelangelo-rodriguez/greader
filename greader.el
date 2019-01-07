@@ -55,7 +55,7 @@
 (defvar greader-synth-process nil)
 (defun greader-load-backends ()
   "loads backends taken from greader-backends."
-  (mapcar require greader-backends))
+  (mapcar 'require greader-backends))
 (defun greader-call-backend (command &optional arg &rest ignore)
   (if arg
       (funcall greader-actual-backend command arg)
@@ -209,8 +209,8 @@ For example, if you specify a function that gets a sentence, you should specify 
     (if greader-auto-tired-timer
 	(progn
 	  (cancel-timer greader-auto-tired-timer)
-	  (greader-toggle-timer)))))
-
+	  (greader-toggle-timer))))
+(greader-load-backends))
 (defun greader-read-synchronous (txt)
   "sends string to the tts."
 
@@ -753,7 +753,5 @@ new lines can be either in unix stile, or ms, or macosX."
   "prints text properties associated with current char."
   (interactive)
   (print (text-properties-at (point))))
-  
-
 (provide 'greader)
 ;;; greader.el ends here
