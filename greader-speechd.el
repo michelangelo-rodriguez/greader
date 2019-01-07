@@ -51,8 +51,8 @@ none, some, or all."
   "sets language 'lang' for speech-dispatcher client.
 if lang is omitted, it looks in variable greader-speechd-language and retrieves the appropriate string used by spd-say or another client compatible."
   (if (not lang)
-    (concat "-l " greader-speechd-language)
-    (concat "-l " lang)))
+    (concat "-l" greader-speechd-language)
+    (concat "-l" lang)))
 
 (defun greader-speechd-set-rate
     (&optional rate)
@@ -68,15 +68,15 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
   (cond
    ((booleanp punct)
     (if punct
-	(throw 'return (concat "-m all"))
-      (throw 'return (concat "-m none"))))
+	(throw 'return (concat "-mall"))
+      (throw 'return (concat "-mnone"))))
    ((numberp punct)
      (if (= punct 0)
-	 (throw 'return (concat "-m none")))
+	 (throw 'return (concat "-mnone")))
      (if (= punct 1)
-	 (throw 'return (concat "-m some")))
+	 (throw 'return (concat "-msome")))
      (if (>= punct 2)
-	 (throw 'return (concat "-m all")))))))
+	 (throw 'return (concat "-mall")))))))
 (defun greader-speechd-stop ()
   "stops speech-dispatcher client."
   (start-process "speechd-client" nil greader-speechd-executable-path "-S"))

@@ -1,5 +1,5 @@
 ;;; greader.el --- gnamù reader, a reader with espeak tts  -*- lexical-binding: t; -*-
-
+;Copyright (C) 2019 by Michelangelo Rodriguez
 ;; Copyright (C) 2017  Michelangelo Rodriguez
 ;; package-requires: ((emacs "25"))
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
@@ -53,6 +53,13 @@
 (defvar greader-backend-action 'greader-default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
+(defun greader-load-backends ()
+  "loads backends taken from greader-backends."
+  (mapcar require greader-backends))
+(defun greader-call-backend (command &optional arg &rest ignore)
+  (if arg
+      (funcall greader-actual-backend command arg)
+    (funcall greader-actual-backend command)))
 
 (defgroup
   greader
@@ -145,13 +152,9 @@ the variable `greader-move-to-next-chung' must be set to a function that moves t
 For example, if you specify a function that gets a sentence, you should specify a function that moves to the next one."
   :type 'function
   :tag "greader get chung of text function")
-(defcustom
+(defvar
   greader-backend-filename
-  "/usr/bin/espeak"
-  "file name of the command for speech-dispatcher client.
-The program you specify must accept same arguments of spd-say program."
-  :tag "speech-dispatcher client file name"
-  :type 'file)
+  (greader-call-backend 'executable))
 
 (defcustom
   greader-rate
@@ -230,7 +233,7 @@ The program you specify must accept same arguments of spd-say program."
     (setq txt text)
     (setq backend (append greader-backend `(,txt) backend))
     (and (stringp txt) (setq-local greader-synth-process (make-process
-							  :name "spd-say"
+							  :name "greader-backend"
 							  :sentinel 'greader-action
 							  :filter 'greader-process-filter
 							  :command backend)))
@@ -259,6 +262,11 @@ The program you specify must accept same arguments of spd-say program."
 
 (defun greader-tts-stop ()
   (set-process-sentinel greader-synth-process 'greader-default-action)
+  (if
+      (not
+       (eq
+	(greader-call-backend 'stop) 'not-implemented))
+      (greader-call-backend 'stop))
   (delete-process greader-synth-process)
   (setq-local greader-backend-action 'greader-default-action))
 
@@ -277,20 +285,28 @@ The program you specify must accept same arguments of spd-say program."
   (greader-reset)
   (let (args arg)
     (setq arg
-	  (concat "-s" (number-to-string greader-rate)))
+	  (greader-call-backend 'rate))
     (setq args (append `(,arg) args))
-
-    (cond (greader-language
+    (cond ((greader-call-backend 'lang)
 	   (setq arg
-		 (concat "-v" greader-language))
+		 (greader-call-backend 'lang))
 	   (setq args (append `(,arg) args))))
-    (cond (greader-punctuation
-	   (setq arg "--punct")
+    (cond ((greader-call-backend 'punctuation)
+	   (setq arg (greader-call-backend 'punctuation))
 	   (setq args (append `(,arg) args))))
-    (setq greader-backend (append greader-backend args))))
+    (setq greader-backend (greader-call-backend 'executable))
+    (cond
+     (
+      (not
+       (eq
+	(greader-call-backend 'extra)
+	'not-implemented))
+      (setq arg (greader-call-backend 'extra))
+      (setq args (append `(,arg) args))))
+    (setq greader-backend (append `(,greader-backend) args))))
 
 (defun greader-reset ()
-  (setq greader-backend `(,greader-backend-filename)))
+  (setq greader-backend `(,(greader-call-backend 'executable))))
 (defun greader-next-action (process event)
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
