@@ -87,3 +87,4 @@ this function accepts only nil or t."
        (greader-espeak-set-punctuation arg)))
     (command-not-implemented
      'not-implemented)))
+(provide 'greader-espeak)
