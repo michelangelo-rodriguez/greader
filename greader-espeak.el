@@ -87,4 +87,5 @@ this function accepts only nil or t."
        (greader-espeak-set-punctuation arg)))
     (command-not-implemented
      'not-implemented)))
+(put 'greader-espeak 'greader-backend-name "greader-espeak")
 (provide 'greader-espeak)
