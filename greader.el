@@ -85,7 +85,8 @@
 	(if
 	    (= (+ index 1) len)
 	    (setq-local greader-actual-backend (elt greader-backends 0))
-	  (setq greader-actual-backend (elt greader-backends (+ index 1)))))))
+	  (setq greader-actual-backend (elt greader-backends (+ index 1))))))
+  (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
 (defun greader-call-backend (command &optional arg &rest ignore)
   (if arg
       (funcall greader-actual-backend command arg)
@@ -193,15 +194,7 @@ For example, if you specify a function that gets a sentence, you should specify 
   :tag "speech rate"
   :type 'integer)
 
-(defcustom
-  greader-language
-  nil
-  "Sets language of synthesizer in ISO code, (E.G `en' for english, `fr' for french ecc...)
-  if nil, it means that it will be used the standard configuration for the back-end."
-  :tag "speech language"
-  :type '(choice
-	  (const nil)
-	  string))
+
 
 (defcustom
   greader-punctuation
@@ -479,7 +472,7 @@ For example, if you specify a function that gets a sentence, you should specify 
 The language must be in ISO code, for example 'en' for english or 'fr' for french.
 This function sets the language of tts local for current buffer, so if you want to set it globally, please use 'm-x customize-option <RET> greader-language <RET>'."
   (interactive "sset language to:")
-  (setq-local greader-language lang))
+  (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
   (setq-local greader-punctuation flag)
   greader-punctuation)
