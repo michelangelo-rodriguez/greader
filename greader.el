@@ -1,5 +1,5 @@
 ;;; greader.el --- gnamù reader, a reader with espeak tts  -*- lexical-binding: t; -*-
-;Copyright (C) 2019 by Michelangelo Rodriguez
+					;Copyright (C) 2019 by Michelangelo Rodriguez
 ;; Copyright (C) 2017  Michelangelo Rodriguez
 ;; package-requires: ((emacs "25"))
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
@@ -56,6 +56,36 @@
 (defun greader-load-backends ()
   "loads backends taken from greader-backends."
   (mapcar 'require greader-backends))
+(require 'seq)
+(defun greader-change-backend (&optional backend)
+  "changes back-end. if backend is specified, it changes to backend, else it cycles throwgh available back-ends."
+  (interactive
+   (list
+    (if current-prefix-arg
+	(setq backend (read-from-minibuffer "backend: ")))))
+  (if (functionp backend)
+      (if (memq backend greader-backends)
+	  (setq greader-actual-backend backend)
+	(error "%s" "The function you have specified is not a greader's back-end.")))
+  (if (stringp backend)
+      (progn
+	(let ((result nil))
+	  (dolist (elem greader-backends result)
+	    (if
+		(equal
+		 (get elem 'greader-backend-name) backend)
+		(setq result elem)))
+	  (if result
+	      (setq greader-actual-backend result)
+	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
+  (if (not backend)
+      (let
+	  ((index (seq-position greader-backends greader-actual-backend))
+	   (len (length greader-backends)))
+	(if
+	    (= (+ index 1) len)
+	    (setq-local greader-actual-backend (elt greader-backends 0))
+	  (setq greader-actual-backend (elt greader-backends (+ index 1)))))))
 (defun greader-call-backend (command &optional arg &rest ignore)
   (if arg
       (funcall greader-actual-backend command arg)
@@ -197,6 +227,7 @@ For example, if you specify a function that gets a sentence, you should specify 
 (define-key greader-reading-map (kbd "+") 'greader-inc-rate)
 (define-key greader-reading-map (kbd "-") 'greader-dec-rate)
 (define-key greader-map (kbd "C-r f") 'greader-get-attributes)
+(define-key greader-map (kbd "C-r b") 'greader-change-backend)
 (define-minor-mode greader
   nil
   nil
@@ -210,7 +241,7 @@ For example, if you specify a function that gets a sentence, you should specify 
 	(progn
 	  (cancel-timer greader-auto-tired-timer)
 	  (greader-toggle-timer))))
-(greader-load-backends))
+  (greader-load-backends))
 (defun greader-read-synchronous (txt)
   "sends string to the tts."
 
