@@ -51,8 +51,10 @@ this variable determines authomatically if espeak is present in your PATH enviro
     (&optional lang)
   "returns the appropriate string to pass to espeak in order to set the language appropriately"
   (if (not lang)
-            (concat "-v" greader-espeak-language)
-    (concat "-v " lang)))
+      (concat "-v" greader-espeak-language)
+    (progn
+      (setq-local greader-espeak-language lang)
+      (concat "-v " lang))))
 (defun greader-espeak--find-executable
     ()
   "tries to find espeak executable in PATH.
