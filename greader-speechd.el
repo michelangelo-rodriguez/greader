@@ -52,7 +52,9 @@ none, some, or all."
 if lang is omitted, it looks in variable greader-speechd-language and retrieves the appropriate string used by spd-say or another client compatible."
   (if (not lang)
     (concat "-l" greader-speechd-language)
-    (concat "-l" lang)))
+    (progn
+      (setq-local greader-speechd-language lang)
+    (concat "-l" lang))))
 
 (defun greader-speechd-set-rate
     (&optional rate)
@@ -103,4 +105,5 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
      "-w")
     (not-implemented
      'not-implemented)))
+(put 'greader-speechd 'greader-backend-name "greader-speechd")
 (provide 'greader-speechd)
