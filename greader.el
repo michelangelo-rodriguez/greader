@@ -187,22 +187,6 @@ For example, if you specify a function that gets a sentence, you should specify 
   greader-backend-filename
   (greader-call-backend 'executable))
 
-(defcustom
-  greader-rate
-  200
-  "sets rate of synthesizer, values are from -100 to 100, -100 lowest and 100 highest."
-  :tag "speech rate"
-  :type 'integer)
-
-
-
-(defcustom
-  greader-punctuation
-  nil
-  "sets punctuation for tts to pronounce, either true or false."
-  :tag "speech punctuation"
-  :type 'boolean)
-
 (defvar greader-backend `(,greader-backend-filename))
 (defvar greader-prefix-map (make-sparse-keymap))
 (defvar greader-map (make-sparse-keymap))
