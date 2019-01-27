@@ -59,15 +59,15 @@ this variable determines authomatically if espeak is present in your PATH enviro
     ()
   "tries to find espeak executable in PATH.
 If it's present, returns absolute path of espeak, else returns nil."
-(locate-file "espeak" exec-path))
+  (locate-file "espeak" exec-path))
+
 (defun greader-espeak-set-punctuation
     (&optional switch)
   "sets espeak punctuation on or off.
 this function accepts only nil or t."
   (if switch
-      "--punct"
-    greader-espeak-punctuation))
-
+      (setq-local greader-espeak-punctuation switch)
+    greader-espeak-punctuation))    
 (defun greader-espeak (command &optional arg &rest args)
   "back-end main function of greader-espeak."
   (pcase command
@@ -84,9 +84,21 @@ this function accepts only nil or t."
 	 (greader-espeak-set-rate)
        (greader-espeak-set-rate arg)))
     ('punctuation
-     (if (not arg)
-	 (greader-espeak-set-punctuation)
-       (greader-espeak-set-punctuation arg)))
+     (cond
+
+      (
+       (or (equal arg 'yes) arg)
+       (setq-local greader-espeak-punctuation t)
+       "--punct")
+      (
+       (equal arg 'no)
+       (setq-local greader-espeak-punctuation nil)
+       nil)
+      ((not arg)
+       (if greader-espeak-punctuation
+	   "--punct"
+	 greader-espeak-punctuation))))
+     
     (command-not-implemented
      'not-implemented)))
 (put 'greader-espeak 'greader-backend-name "greader-espeak")

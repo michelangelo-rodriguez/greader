@@ -458,21 +458,21 @@ This function sets the language of tts local for current buffer, so if you want 
   (interactive "sset language to:")
   (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
-  (setq-local greader-punctuation flag)
+  (greader-call-backend 'punctuation flag)
   greader-punctuation)
 (defun greader-toggle-punctuation ()
   "Toggles punctuation locally for current buffer."
   (interactive)
-  (if greader-punctuation
+  (if (equal (greader-call-backend 'punctuation) "")
       (progn
 	(greader-stop)
-	(greader-set-punctuation nil)
-	(message "punctuation disabled in current buffer")
+	(greader-set-punctuation t)
+	(message "punctuation enabled in current buffer")
 	(greader-read))
     (progn
       (greader-stop)
-      (greader-set-punctuation t)
-      (message "punctuation enabled in current buffer")
+      (greader-set-punctuation nil)
+      (message "punctuation disabled in current buffer")
       (greader-read))))
 
 (defun greader-toggle-timer-flag ()
@@ -696,8 +696,8 @@ The default is 22:00 for entering and 08:00 for exiting."
 (defun greader-set-rate (n)
   "sets rate in current buffer to tthe specified value in n. rate is expressed in words per minute.
 For maximum value, see 'man espeak'."
+  (greader-call-backend 'rate n))
 
-  (setq-local greader-rate n))
 
 (defun greader-inc-rate (&optional n)
   "increments rate of speech by 10 units.

@@ -70,15 +70,25 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
   (cond
    ((booleanp punct)
     (if punct
-	(throw 'return (concat "-mall"))
-      (throw 'return (concat "-mnone"))))
+	(progn
+	  (setq-local greader-speechd-punctuation "all")
+	  (throw 'return (concat "-mall")))
+      (progn
+	(setq-local greader-speechd-punctuation "none")
+	(throw 'return (concat "-mnone")))))
    ((numberp punct)
      (if (= punct 0)
-	 (throw 'return (concat "-mnone")))
+	 (progn
+	   (setq-local greader-speechd-punctuation "none")
+	   (throw 'return (concat "-mnone"))))
      (if (= punct 1)
-	 (throw 'return (concat "-msome")))
+	 (progn
+	   (setq-local greader-speechd-punctuation "some")
+	   (throw 'return (concat "-msome"))))
      (if (>= punct 2)
-	 (throw 'return (concat "-mall")))))))
+	 (progn
+	   (setq-local greader-speechd-punctuation "all")
+	   (throw 'return (concat "-mall"))))))))
 (defun greader-speechd-stop ()
   "stops speech-dispatcher client."
   (start-process "speechd-client" nil greader-speechd-executable-path "-S"))
@@ -96,9 +106,13 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
 	 (greader-speechd-set-rate)
        (greader-speechd-set-rate arg)))
     ('punctuation
-     (if (not arg)
-	 (greader-speechd-set-punctuation)
-       (greader-speechd-set-punctuation arg)))
+     (cond
+      ((equal arg 'no)
+       (greader-speechd-set-punctuation 0))
+      ((equal arg 'yes)
+       (greader-speechd-set-punctuation 2))
+      ((not arg)
+       (greader-speechd-set-punctuation))))
     ('stop
      (greader-speechd-stop))
     ('extra
