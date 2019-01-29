@@ -85,7 +85,7 @@
 	(if
 	    (= (+ index 1) len)
 	    (setq-local greader-actual-backend (elt greader-backends 0))
-	  (setq greader-actual-backend (elt greader-backends (+ index 1))))))
+	  (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
   (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
 (defun greader-call-backend (command &optional arg &rest ignore)
   (if arg
