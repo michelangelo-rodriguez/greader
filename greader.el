@@ -1,5 +1,5 @@
 ;;; greader.el --- gnamù reader, a reader with espeak tts  -*- lexical-binding: t; -*-
-
+					;Copyright (C) 2019 by Michelangelo Rodriguez
 ;; Copyright (C) 2017  Michelangelo Rodriguez
 ;; package-requires: ((emacs "25"))
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
@@ -53,18 +53,66 @@
 (defvar greader-backend-action 'greader-default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
+(defun greader-load-backends ()
+  "loads backends taken from greader-backends."
+  (mapcar 'require greader-backends))
+(require 'seq)
+(defun greader-change-backend (&optional backend)
+  "changes back-end. if backend is specified, it changes to backend, else it cycles throwgh available back-ends."
+  (interactive
+   (list
+    (if current-prefix-arg
+	(setq backend (read-from-minibuffer "backend: ")))))
+  (if (functionp backend)
+      (if (memq backend greader-backends)
+	  (setq greader-actual-backend backend)
+	(error "%s" "The function you have specified is not a greader's back-end.")))
+  (if (stringp backend)
+      (progn
+	(let ((result nil))
+	  (dolist (elem greader-backends result)
+	    (if
+		(equal
+		 (get elem 'greader-backend-name) backend)
+		(setq result elem)))
+	  (if result
+	      (setq greader-actual-backend result)
+	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
+  (if (not backend)
+      (let
+	  ((index (seq-position greader-backends greader-actual-backend))
+	   (len (length greader-backends)))
+	(if
+	    (= (+ index 1) len)
+	    (setq-local greader-actual-backend (elt greader-backends 0))
+	  (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
+  (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
+(defun greader-call-backend (command &optional arg &rest ignore)
+  (if arg
+      (funcall greader-actual-backend command arg)
+    (funcall greader-actual-backend command)))
 
 (defgroup
-  Greader
+  greader
   nil
   "greader customization")
 (defcustom
   greader-backends
-  ()
+  '(greader-espeak greader-speechd)
   "A list of functions that are back-ends for greader."
   :tag "greader back-ends"
-  :type '(repeat list))
-
+  :type '(repeat function))
+(defcustom
+  greader-actual-backend
+  'greader-espeak
+  "greader back-end to use"
+  :tag "greader actual back-end"
+  :type
+  `(radio
+    ,@(mapcar
+       (lambda (backend)
+	 `(function-item ,backend))
+       greader-backends)))
 (defcustom
   greader-auto-tired-mode-time
   "22"
@@ -135,37 +183,9 @@ the variable `greader-move-to-next-chung' must be set to a function that moves t
 For example, if you specify a function that gets a sentence, you should specify a function that moves to the next one."
   :type 'function
   :tag "greader get chung of text function")
-(defcustom
+(defvar
   greader-backend-filename
-  "/usr/bin/espeak"
-  "file name of the command for speech-dispatcher client.
-The program you specify must accept same arguments of spd-say program."
-  :tag "speech-dispatcher client file name"
-  :type 'file)
-
-(defcustom
-  greader-rate
-  200
-  "sets rate of synthesizer, values are from -100 to 100, -100 lowest and 100 highest."
-  :tag "speech rate"
-  :type 'integer)
-
-(defcustom
-  greader-language
-  nil
-  "Sets language of synthesizer in ISO code, (E.G `en' for english, `fr' for french ecc...)
-  if nil, it means that it will be used the standard configuration for the back-end."
-  :tag "speech language"
-  :type '(choice
-	  (const nil)
-	  string))
-
-(defcustom
-  greader-punctuation
-  nil
-  "sets punctuation for tts to pronounce, either true or false."
-  :tag "speech punctuation"
-  :type 'boolean)
+  (greader-call-backend 'executable))
 
 (defvar greader-backend `(,greader-backend-filename))
 (defvar greader-prefix-map (make-sparse-keymap))
@@ -184,6 +204,7 @@ The program you specify must accept same arguments of spd-say program."
 (define-key greader-reading-map (kbd "+") 'greader-inc-rate)
 (define-key greader-reading-map (kbd "-") 'greader-dec-rate)
 (define-key greader-map (kbd "C-r f") 'greader-get-attributes)
+(define-key greader-map (kbd "C-r b") 'greader-change-backend)
 (define-minor-mode greader
   nil
   nil
@@ -196,8 +217,8 @@ The program you specify must accept same arguments of spd-say program."
     (if greader-auto-tired-timer
 	(progn
 	  (cancel-timer greader-auto-tired-timer)
-	  (greader-toggle-timer)))))
-
+	  (greader-toggle-timer))))
+  (greader-load-backends))
 (defun greader-read-synchronous (txt)
   "sends string to the tts."
 
@@ -220,7 +241,7 @@ The program you specify must accept same arguments of spd-say program."
     (setq txt text)
     (setq backend (append greader-backend `(,txt) backend))
     (and (stringp txt) (setq-local greader-synth-process (make-process
-							  :name "spd-say"
+							  :name "greader-backend"
 							  :sentinel 'greader-action
 							  :filter 'greader-process-filter
 							  :command backend)))
@@ -249,6 +270,11 @@ The program you specify must accept same arguments of spd-say program."
 
 (defun greader-tts-stop ()
   (set-process-sentinel greader-synth-process 'greader-default-action)
+  (if
+      (not
+       (eq
+	(greader-call-backend 'stop) 'not-implemented))
+      (greader-call-backend 'stop))
   (delete-process greader-synth-process)
   (setq-local greader-backend-action 'greader-default-action))
 
@@ -267,20 +293,28 @@ The program you specify must accept same arguments of spd-say program."
   (greader-reset)
   (let (args arg)
     (setq arg
-	  (concat "-s" (number-to-string greader-rate)))
+	  (greader-call-backend 'rate))
     (setq args (append `(,arg) args))
-
-    (cond (greader-language
+    (cond ((greader-call-backend 'lang)
 	   (setq arg
-		 (concat "-v" greader-language))
+		 (greader-call-backend 'lang))
 	   (setq args (append `(,arg) args))))
-    (cond (greader-punctuation
-	   (setq arg "--punct")
+    (cond ((greader-call-backend 'punctuation)
+	   (setq arg (greader-call-backend 'punctuation))
 	   (setq args (append `(,arg) args))))
-    (setq greader-backend (append greader-backend args))))
+    (setq greader-backend (greader-call-backend 'executable))
+    (cond
+     (
+      (not
+       (eq
+	(greader-call-backend 'extra)
+	'not-implemented))
+      (setq arg (greader-call-backend 'extra))
+      (setq args (append `(,arg) args))))
+    (setq greader-backend (append `(,greader-backend) args))))
 
 (defun greader-reset ()
-  (setq greader-backend `(,greader-backend-filename)))
+  (setq greader-backend `(,(greader-call-backend 'executable))))
 (defun greader-next-action (process event)
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
@@ -422,23 +456,23 @@ The program you specify must accept same arguments of spd-say program."
 The language must be in ISO code, for example 'en' for english or 'fr' for french.
 This function sets the language of tts local for current buffer, so if you want to set it globally, please use 'm-x customize-option <RET> greader-language <RET>'."
   (interactive "sset language to:")
-  (setq-local greader-language lang))
+  (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
-  (setq-local greader-punctuation flag)
+  (greader-call-backend 'punctuation flag)
   greader-punctuation)
 (defun greader-toggle-punctuation ()
   "Toggles punctuation locally for current buffer."
   (interactive)
-  (if greader-punctuation
+  (if (equal (greader-call-backend 'punctuation) "")
       (progn
 	(greader-stop)
-	(greader-set-punctuation nil)
-	(message "punctuation disabled in current buffer")
+	(greader-set-punctuation t)
+	(message "punctuation enabled in current buffer")
 	(greader-read))
     (progn
       (greader-stop)
-      (greader-set-punctuation t)
-      (message "punctuation enabled in current buffer")
+      (greader-set-punctuation nil)
+      (message "punctuation disabled in current buffer")
       (greader-read))))
 
 (defun greader-toggle-timer-flag ()
@@ -662,8 +696,8 @@ The default is 22:00 for entering and 08:00 for exiting."
 (defun greader-set-rate (n)
   "sets rate in current buffer to tthe specified value in n. rate is expressed in words per minute.
 For maximum value, see 'man espeak'."
+  (greader-call-backend 'rate n))
 
-  (setq-local greader-rate n))
 
 (defun greader-inc-rate (&optional n)
   "increments rate of speech by 10 units.
@@ -727,7 +761,5 @@ new lines can be either in unix stile, or ms, or macosX."
   "prints text properties associated with current char."
   (interactive)
   (print (text-properties-at (point))))
-  
-
 (provide 'greader)
 ;;; greader.el ends here
