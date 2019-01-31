@@ -68,6 +68,7 @@ this function accepts only nil or t."
   (if switch
       (setq-local greader-espeak-punctuation switch)
     greader-espeak-punctuation))    
+;;;###autoload
 (defun greader-espeak (command &optional arg &rest args)
   "back-end main function of greader-espeak."
   (pcase command
