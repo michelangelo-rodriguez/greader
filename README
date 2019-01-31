@@ -1,0 +1,10 @@
+Usage:
+In order to use greader, you have to install either espeak and/or speech-dispatcher and, in case of speech-dispatcher, it has to work.
+
+if external packages work properly, using greader is easy:
+'M-x greader <ret>'
+In the mode line appears "greader".
+then you press 'C-r" and greader starts reading, moving the cursor at the start of the sentence it is reading at the moment.
+to stop reading, just press '<spc>'.
+if you want to change the language in which the text is spoken, press 'C-r l', and when asked to new language, digit the language iso code.
+If you want to cycle throwgh available back-ends, you have to press 'C-r b'. With a prefix arg, this command asks you to type a back-end name.
