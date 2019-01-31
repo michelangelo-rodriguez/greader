@@ -21,7 +21,11 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
+;;; to start using greader, you have to install espeak and/or speech-dispatcher, and make sure those packages work correctly.
 
+;;; In order to read a buffer:
+;;; 'M-x greader'
+;;; 'C-r <spc>'
 ;; 
 
 ;;; Code:
