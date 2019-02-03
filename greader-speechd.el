@@ -93,7 +93,8 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
 	   (throw 'return (concat "-mall"))))))))
 (defun greader-speechd-stop ()
   "stops speech-dispatcher client."
-  (start-process "speechd-client" nil greader-speechd-executable-path "-S"))
+  (start-process "speechd-client" nil greader-speechd-executable-path "-S")
+  (sleep-for 0 100))
 ;;;###autoload
 (defun greader-speechd (command &optional arg &rest ignore)
   "greader speech-dispatcher back-end."
