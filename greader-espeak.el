@@ -3,11 +3,11 @@
 
 
 
-;Copyright (C) 2019 by Michelangelo Rodriguez
+					;Copyright (C) 2019 by Michelangelo Rodriguez
 
 
 (defgroup greader-espeak
-nil
+  nil
   "back-end of espeak for greader."
   :group 'greader
   )
@@ -39,7 +39,7 @@ this variable determines authomatically if espeak is present in your PATH enviro
   "espeak punctuation switch."
   :tag "espeak punctuation"
   :type 'boolean)
-  
+
 ;;; code
 (defun greader-espeak-set-rate
     (&optional rate)
@@ -92,9 +92,8 @@ this function accepts only nil or t."
        greader-espeak-rate)))
     ('punctuation
      (cond
-
       (
-       (or (equal arg 'yes) arg)
+       (equal arg 'yes)
        (setq-local greader-espeak-punctuation t)
        "--punct")
       (
@@ -104,8 +103,8 @@ this function accepts only nil or t."
       ((not arg)
        (if greader-espeak-punctuation
 	   "--punct"
-	 greader-espeak-punctuation))))
-     
+	 nil))))
+    
     (command-not-implemented
      'not-implemented)))
 (put 'greader-espeak 'greader-backend-name "greader-espeak")

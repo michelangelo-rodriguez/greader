@@ -467,15 +467,15 @@ This function sets the language of tts local for current buffer, so if you want 
 (defun greader-toggle-punctuation ()
   "Toggles punctuation locally for current buffer."
   (interactive)
-  (if (equal (greader-call-backend 'punctuation) "")
+  (if (not (greader-call-backend 'punctuation))
       (progn
 	(greader-stop)
-	(greader-set-punctuation t)
+	(greader-set-punctuation 'yes)
 	(message "punctuation enabled in current buffer")
 	(greader-read))
     (progn
       (greader-stop)
-      (greader-set-punctuation nil)
+      (greader-set-punctuation 'no)
       (message "punctuation disabled in current buffer")
       (greader-read))))
 
