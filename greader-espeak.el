@@ -46,7 +46,9 @@ this variable determines authomatically if espeak is present in your PATH enviro
   "returns a string suitable for setting espeak rate."
   (if (not rate)
       (concat "-s" (number-to-string greader-espeak-rate))
-    (concat "-s" (number-to-string rate))))
+    (progn
+      (setq-local greader-espeak-rate rate)
+      (concat "-s" (number-to-string rate)))))
 (defun greader-espeak-set-language
     (&optional lang)
   "returns the appropriate string to pass to espeak in order to set the language appropriately"
@@ -81,9 +83,13 @@ this function accepts only nil or t."
 	 (greader-espeak-set-language)
        (greader-espeak-set-language arg)))
     ('rate
-     (if (not arg)
-	 (greader-espeak-set-rate)
-       (greader-espeak-set-rate arg)))
+     (cond
+      ((not arg)
+       (greader-espeak-set-rate))
+      ((numberp arg)
+       (greader-espeak-set-rate arg))
+      ((equal arg 'value)
+       greader-espeak-rate)))
     ('punctuation
      (cond
 

@@ -710,7 +710,7 @@ If prefix, it will be used to increment by that."
   (if (not n)
       (setq n 10))
   (greader-stop)
-  (greader-set-rate (+ greader-rate n))
+  (greader-set-rate (+ (greader-call-backend 'rate 'value) n))
   (greader-read))
 
 (defun greader-dec-rate (&optional n)
@@ -720,7 +720,7 @@ If prefix, it will be used to decrement  rate."
   (if (not n)
       (setq n 10))
   (greader-stop)
-  (greader-set-rate (- greader-rate n))
+  (greader-set-rate (- (greader-call-backend 'rate 'value) n))
   (greader-read))
 
 (defun greader-sentence-needs-dehyphenation (str)

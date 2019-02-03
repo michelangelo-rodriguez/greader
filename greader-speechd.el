@@ -62,7 +62,9 @@ if lang is omitted, it looks in variable greader-speechd-language and retrieves 
 for further documentation, see the documentation for greader-speechd-rate variable."
   (if (not rate)
       (concat "-r " (number-to-string greader-speechd-rate))
-    (concat "-r " (number-to-string rate))))
+    (progn
+      (setq-local greader-speechd-rate rate)
+    (concat "-r " (number-to-string rate)))))
 (defun greader-speechd-set-punctuation (&optional punct)
   "returns a suitable parameter to pass to spd-say for setting punctuation leve.
 punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for all punctuation."
@@ -103,9 +105,12 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
 	 (greader-speechd-set-language)
        (greader-speechd-set-language arg)))
     ('rate
-     (if (not arg)
-	 (greader-speechd-set-rate)
-       (greader-speechd-set-rate arg)))
+     (cond((not arg)
+	   (greader-speechd-set-rate))
+	  ((numberp arg)
+	   (greader-speechd-set-rate arg))
+	  ((equal arg 'value)
+	   greader-speechd-rate)))
     ('punctuation
      (cond
       ((equal arg 'no)
