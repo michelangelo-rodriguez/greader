@@ -16,7 +16,7 @@
   :type 'string)
 (defcustom
   greader-speechd-executable-path
-(locate-file greader-speechd-executable exec-path)
+  (locate-file greader-speechd-executable exec-path)
   "Path of speech-dispatcher client executable."
   :tag "speechd client executable path"
   :type 'string)
@@ -36,7 +36,7 @@
 (defcustom
   greader-speechd-punctuation
   "none"
-"punctuation level of speech-dispatcher client to speak.
+  "punctuation level of speech-dispatcher client to speak.
 It must be one of the following:
 none, some, or all."
   :tag "speech-dispatcher punctuation level"
@@ -44,17 +44,17 @@ none, some, or all."
 ;;; code
 (defun greader-speechd--find-executable ()
   "tries to find speech-dispatcher client using greader-speechd-executable as basename."
-(locate-file greader-speechd-executable exec-path))
+  (locate-file greader-speechd-executable exec-path))
 
 (defun greader-speechd-set-language
     (&optional lang)
   "sets language 'lang' for speech-dispatcher client.
 if lang is omitted, it looks in variable greader-speechd-language and retrieves the appropriate string used by spd-say or another client compatible."
   (if (not lang)
-    (concat "-l" greader-speechd-language)
+      (concat "-l" greader-speechd-language)
     (progn
       (setq-local greader-speechd-language lang)
-    (concat "-l" lang))))
+      (concat "-l" lang))))
 
 (defun greader-speechd-set-rate
     (&optional rate)
@@ -64,33 +64,33 @@ for further documentation, see the documentation for greader-speechd-rate variab
       (concat "-r " (number-to-string greader-speechd-rate))
     (progn
       (setq-local greader-speechd-rate rate)
-    (concat "-r " (number-to-string rate)))))
+      (concat "-r " (number-to-string rate)))))
+
 (defun greader-speechd-set-punctuation (&optional punct)
   "returns a suitable parameter to pass to spd-say for setting punctuation leve.
 punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for all punctuation."
-(catch 'return
-  (cond
-   ((booleanp punct)
-    (if punct
-	(progn
-	  (setq-local greader-speechd-punctuation "all")
-	  (throw 'return (concat "-mall")))
-      (progn
-	(setq-local greader-speechd-punctuation "none")
-	(throw 'return (concat "-mnone")))))
-   ((numberp punct)
-     (if (= punct 0)
-	 (progn
-	   (setq-local greader-speechd-punctuation "none")
-	   (throw 'return (concat "-mnone"))))
-     (if (= punct 1)
-	 (progn
-	   (setq-local greader-speechd-punctuation "some")
-	   (throw 'return (concat "-msome"))))
-     (if (>= punct 2)
-	 (progn
-	   (setq-local greader-speechd-punctuation "all")
-	   (throw 'return (concat "-mall"))))))))
+  (catch 'return
+    (cond
+     ((booleanp punct)
+      (if punct
+	  (progn
+	    (setq-local greader-speechd-punctuation "all")
+	    (throw 'return (concat "-mall")))
+	  (throw 'return greader-speechd-punctuation)))
+     ((numberp punct)
+      (if (= punct 0)
+	  (progn
+	    (setq-local greader-speechd-punctuation "none")
+	    (throw 'return (concat "-mnone"))))
+      (if (= punct 1)
+	  (progn
+	    (setq-local greader-speechd-punctuation "some")
+	    (throw 'return (concat "-msome"))))
+      (if (>= punct 2)
+	  (progn
+	    (setq-local greader-speechd-punctuation "all")
+	    (throw 'return (concat "-mall"))))))))
+
 (defun greader-speechd-stop ()
   "stops speech-dispatcher client."
   (start-process "speechd-client" nil greader-speechd-executable-path "-S")
@@ -115,16 +115,20 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
     ('punctuation
      (cond
       ((equal arg 'no)
-       (greader-speechd-set-punctuation 0))
+       (greader-speechd-set-punctuation 0)
+       nil)
       ((equal arg 'yes)
        (greader-speechd-set-punctuation 2))
       ((not arg)
-       (greader-speechd-set-punctuation))))
+       (if (equal (greader-speechd-set-punctuation) "all")
+"-mall"
+	 nil))))
     ('stop
      (greader-speechd-stop))
     ('extra
      "-w")
     (not-implemented
      'not-implemented)))
+
 (put 'greader-speechd 'greader-backend-name "greader-speechd")
 (provide 'greader-speechd)
