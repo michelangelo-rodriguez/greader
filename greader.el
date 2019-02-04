@@ -49,57 +49,22 @@
 (defvar greader-tired-flag nil)
 (defvar greader-filter-enabled t)
 (defvar point-limit nil)
-(defvar differs nil)
+(defvar greader-differs nil)
 (defvar greader-not-start-of-sentence '(" " "\n" "\t"))
 (defvar greader-end-of-sentence '("." "?" "!" ":"))
 (defvar greader-debug-buffer "spd-output"
   "contains the buffer name for debugging purposes.")
-(defvar greader-backend-action 'greader-default-action)
+(defvar greader-backend-action 'greader--default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
-(defun greader-load-backends ()
-  "loads backends taken from greader-backends."
-  (mapcar 'require greader-backends))
 (require 'seq)
-(defun greader-change-backend (&optional backend)
-  "changes back-end. if backend is specified, it changes to backend, else it cycles throwgh available back-ends."
-  (interactive
-   (list
-    (if current-prefix-arg
-	(setq backend (read-from-minibuffer "backend: ")))))
-  (if (functionp backend)
-      (if (memq backend greader-backends)
-	  (setq greader-actual-backend backend)
-	(error "%s" "The function you have specified is not a greader's back-end.")))
-  (if (stringp backend)
-      (progn
-	(let ((result nil))
-	  (dolist (elem greader-backends result)
-	    (if
-		(equal
-		 (get elem 'greader-backend-name) backend)
-		(setq result elem)))
-	  (if result
-	      (setq greader-actual-backend result)
-	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
-  (if (not backend)
-      (let
-	  ((index (seq-position greader-backends greader-actual-backend))
-	   (len (length greader-backends)))
-	(if
-	    (= (+ index 1) len)
-	    (setq-local greader-actual-backend (elt greader-backends 0))
-	  (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
-  (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
-(defun greader-call-backend (command &optional arg &rest ignore)
-  (if arg
-      (funcall greader-actual-backend command arg)
-    (funcall greader-actual-backend command)))
 
 (defgroup
   greader
   nil
-  "greader customization")
+  "greader customization"
+  :group 'convenience)
+
 (defcustom
   greader-backends
   '(greader-espeak greader-speechd)
@@ -209,7 +174,7 @@ For example, if you specify a function that gets a sentence, you should specify 
 (define-key greader-reading-map (kbd "-") 'greader-dec-rate)
 (define-key greader-map (kbd "C-r f") 'greader-get-attributes)
 (define-key greader-map (kbd "C-r b") 'greader-change-backend)
-(define-minor-mode greader
+(define-minor-mode greader-mode
   nil
   nil
   " greader"
@@ -223,6 +188,47 @@ For example, if you specify a function that gets a sentence, you should specify 
 	  (cancel-timer greader-auto-tired-timer)
 	  (greader-toggle-timer))))
   (greader-load-backends))
+;;;code
+(defun greader-call-backend (command &optional arg)
+  (if arg
+      (funcall greader-actual-backend command arg)
+    (funcall greader-actual-backend command)))
+
+(defun greader-change-backend (&optional backend)
+  "changes back-end. if backend is specified, it changes to backend, else it cycles throwgh available back-ends."
+  (interactive
+   (list
+    (if current-prefix-arg
+	(setq backend (read-from-minibuffer "backend: ")))))
+  (if (functionp backend)
+      (if (memq backend greader-backends)
+	  (setq greader-actual-backend backend)
+	(error "%s" "The function you have specified is not a greader's back-end.")))
+  (if (stringp backend)
+      (progn
+	(let ((result nil))
+	  (dolist (elem greader-backends result)
+	    (if
+		(equal
+		 (get elem 'greader-backend-name) backend)
+		(setq result elem)))
+	  (if result
+	      (setq greader-actual-backend result)
+	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
+  (if (not backend)
+      (let
+	  ((index (seq-position greader-backends greader-actual-backend))
+	   (len (length greader-backends)))
+	(if
+	    (= (+ index 1) len)
+	    (setq-local greader-actual-backend (elt greader-backends 0))
+	  (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
+  (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
+
+(defun greader-load-backends ()
+  "loads backends taken from greader-backends."
+  (mapcar 'require greader-backends))
+
 (defun greader-read-synchronous (txt)
   "sends string to the tts."
 
@@ -273,18 +279,18 @@ For example, if you specify a function that gets a sentence, you should specify 
     (funcall greader-backend-action process event)))
 
 (defun greader-tts-stop ()
-  (set-process-sentinel greader-synth-process 'greader-default-action)
+  (set-process-sentinel greader-synth-process 'greader--default-action)
   (if
       (not
        (eq
 	(greader-call-backend 'stop) 'not-implemented))
       (greader-call-backend 'stop))
   (delete-process greader-synth-process)
-  (setq-local greader-backend-action 'greader-default-action))
+  (setq-local greader-backend-action 'greader--default-action))
 
-(defun greader-default-action (process event)
+(defun greader--default-action (&optional process event)
   (if greader-debug
-      (greader-debug (format "greader-default-action entered.\nevent: %S\n" event)))
+      (greader-debug (format "greader--default-action entered.\nevent: %S\n" event)))
   (cond
    ((and (greader-timer-flag-p) (timerp greader-stop-timer))
     (greader-cancel-elapsed-timer)
@@ -323,7 +329,7 @@ For example, if you specify a function that gets a sentence, you should specify 
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
   (funcall greader-move-to-next-chung)
-  (funcall greader-read))
+  (funcall 'greader-read))
 
 (defun greader-read ()
   "starts reading of current buffer."
@@ -344,7 +350,7 @@ For example, if you specify a function that gets a sentence, you should specify 
 	  (setq-local greader-backend-action 'greader-next-action)
 	  (greader-read-asynchronous chung))
       (progn
-	(setq-local greader-backend-action 'greader-default-action)
+	(setq-local greader-backend-action 'greader--default-action)
 	(greader-set-greader-keymap)
 	(greader-read-asynchronous ". end")))))
 
@@ -390,14 +396,14 @@ For example, if you specify a function that gets a sentence, you should specify 
       (progn
 	(setq point-limit 'point-min)
 	(setq direction '-)
-	(setq differs '>))
+	(setq greader-differs '>))
     (progn
       (setq point-limit 'point-max)
       (setq direction '+)
-      (setq differs '<)))
+      (setq greader-differs '<)))
   (catch 'afterloop
     (save-excursion
-      (while (funcall differs (point) (funcall point-limit))
+      (while (funcall greader-differs (point) (funcall point-limit))
 	(cond
 	 ((greader-end-sentence-p)
 	  (goto-char (funcall direction (point) 1))
@@ -417,16 +423,16 @@ For example, if you specify a function that gets a sentence, you should specify 
       (progn
 	(setq direction '-)
 	(setq point-limit 'point-min)
-	(setq differs '>))
+	(setq greader-differs '>))
     (progn
       (setq direction '+)
       (setq point-limit 'point-max)
-      (setq differs '<)))
+      (setq greader-differs '<)))
 
   (let (sentence)
     (catch 'afterloop
       (save-excursion
-	(while (funcall differs (point) (funcall point-limit))
+	(while (funcall greader-differs (point) (funcall point-limit))
 	  (setq sentence (concat sentence (string (following-char))))
 	  (cond
 	   ((greader-end-sentence-p)
@@ -563,7 +569,7 @@ If you stops normally with greader-stop, next reading will continue from the tim
       (greader-setup-tired-timer))
   (cond
    ((greader-soft-timer-p)
-    (setq-local greader-backend-action 'greader-default-action))
+    (setq-local greader-backend-action 'greader--default-action))
    ((not greader-soft-timer)
     (greader-stop))))
 
