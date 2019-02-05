@@ -180,7 +180,7 @@ For example, if you specify a function that gets a sentence, you should specify 
   " greader"
   greader-map
   :group greader
-  (if greader
+  (if greader-mode
       (if greader-auto-tired-mode
 	  (greader-auto-tired-mode-setup))
     (if greader-auto-tired-timer
@@ -228,15 +228,6 @@ For example, if you specify a function that gets a sentence, you should specify 
 (defun greader-load-backends ()
   "loads backends taken from greader-backends."
   (mapcar 'require greader-backends))
-
-(defun greader-read-synchronous (txt)
-  "sends string to the tts."
-
-  (if (not dtk-quiet)
-      (dtk-toggle-quiet))
-  (call-process "spd-say" nil "speech-output" "-w" txt)
-  (if dtk-quiet
-      (dtk-toggle-quiet)))
 
 (defun greader-read-asynchronous (txt)
   "reads the text given in txt."
