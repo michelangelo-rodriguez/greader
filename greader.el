@@ -152,11 +152,6 @@ the variable `greader-move-to-next-chung' must be set to a function that moves t
 For example, if you specify a function that gets a sentence, you should specify a function that moves to the next one."
   :type 'function
   :tag "greader get chung of text function")
-(defvar
-  greader-backend-filename
-  (greader-call-backend 'executable))
-
-(defvar greader-backend `(,greader-backend-filename))
 (defvar greader-prefix-map (make-sparse-keymap))
 (defvar greader-map (make-sparse-keymap))
 (defvar greader-reading-map (make-sparse-keymap))
@@ -193,7 +188,10 @@ For example, if you specify a function that gets a sentence, you should specify 
   (if arg
       (funcall greader-actual-backend command arg)
     (funcall greader-actual-backend command)))
-
+(defvar
+  greader-backend-filename
+  (greader-call-backend 'executable))
+(defvar greader-backend `(,greader-backend-filename))
 (defun greader-change-backend (&optional backend)
   "changes back-end. if backend is specified, it changes to backend, else it cycles throwgh available back-ends."
   (interactive
