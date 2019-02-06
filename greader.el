@@ -199,7 +199,7 @@ For example, if you specify a function that gets a sentence, you should specify 
   (interactive
    (list
     (if current-prefix-arg
-	(setq backend (read-from-minibuffer "backend: ")))))
+	(read-from-minibuffer "backend: "))))
   (if (functionp backend)
       (if (memq backend greader-backends)
 	  (setq greader-actual-backend backend)
@@ -337,7 +337,7 @@ For example, if you specify a function that gets a sentence, you should specify 
     (if chung
 	(progn
 	  (greader-set-reading-keymap)
-	  (setq-local greader-read 'greader-read)
+;	  (setq-local greader-read 'greader-read)
 	  (setq-local greader-backend-action 'greader-next-action)
 	  (greader-read-asynchronous chung))
       (progn
