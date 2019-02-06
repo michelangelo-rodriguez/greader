@@ -8,39 +8,29 @@
   "speech-dispatcher back-end for greader"
   :group 'greader)
 
-(defcustom
-  greader-speechd-executable
-  "spd-say"
-  "executable file name."
+(defcustom greader-speechd-executable "spd-say"
+  "Executable file name."
   :tag "speech-dispatcher client executable file name"
   :type 'string)
-(defcustom
-  greader-speechd-executable-path
-  (locate-file greader-speechd-executable exec-path)
-  "Path of speech-dispatcher client executable."
-  :tag "speechd client executable path"
-  :type 'string)
-(defcustom
-  greader-speechd-language
-  "en"
-  "specifies language of speech-dispatcher client to speak in."
+
+(defcustom greader-speechd-language "en"
+  "Language of speech-dispatcher client to speak in."
   :tag "speech-dispatcher language"
   :type 'string)
-(defcustom
-  greader-speechd-rate
-  10
-  "specifies rate of speech.
-(From -100 to 100.)"
+
+(defcustom greader-speechd-rate 10
+  "Rate of speech.
+Can be a value between -100 and 100."
   :tag "speech-dispatcher rate"
   :type 'integer)
-(defcustom
-  greader-speechd-punctuation
-  "none"
-  "punctuation level of speech-dispatcher client to speak.
+
+(defcustom greader-speechd-punctuation "none"
+  "Punctuation level of speech-dispatcher client to speak.
 It must be one of the following:
 none, some, or all."
   :tag "speech-dispatcher punctuation level"
   :type 'string)
+
 ;;; code
 (defun greader-speechd--find-executable ()
   "tries to find speech-dispatcher client using greader-speechd-executable as basename."
@@ -93,14 +83,14 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
 
 (defun greader-speechd-stop ()
   "stops speech-dispatcher client."
-  (start-process "speechd-client" nil greader-speechd-executable-path "-S")
+  (start-process "speechd-client" nil greader-speechd-executable "-S")
   (sleep-for 0 100))
 ;;;###autoload
-(defun greader-speechd (command &optional arg &rest ignore)
+(defun greader-speechd (command &optional arg &rest _)
   "greader speech-dispatcher back-end."
   (pcase command
     ('executable
-     greader-speechd-executable-path)
+     greader-speechd-executable)
     ('lang
      (if (not arg)
 	 (greader-speechd-set-language)
@@ -127,8 +117,7 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
      (greader-speechd-stop))
     ('extra
      "-w")
-    (not-implemented
+    (_
      'not-implemented)))
 
-(put 'greader-speechd 'greader-backend-name "greader-speechd")
 (provide 'greader-speechd)
