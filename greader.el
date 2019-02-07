@@ -184,6 +184,13 @@ For example, if you specify a function that gets a sentence, you should specify 
 	  (greader-toggle-timer))))
   (greader-load-backends))
 ;;;code
+(defun greader--get-backends ()
+  "returns actual available back-ends, as a list of strings."
+  (let (b)
+    (dolist (greader-elem greader-backends nil)
+      (setq b (append b `(,(get greader-elem 'greader-backend-name)))))
+    b))
+
 (defun greader-call-backend (command &optional arg)
   (if arg
       (funcall greader-actual-backend command arg)
@@ -192,12 +199,13 @@ For example, if you specify a function that gets a sentence, you should specify 
   greader-backend-filename
   (greader-call-backend 'executable))
 (defvar greader-backend `(,greader-backend-filename))
+
 (defun greader-change-backend (&optional backend)
   "changes back-end. if backend is specified, it changes to backend, else it cycles throwgh available back-ends."
   (interactive
    (list
     (if current-prefix-arg
-	(setq backend (read-from-minibuffer "backend: ")))))
+(completing-read"back-end:" (greader--get-backends)))))
   (if (functionp backend)
       (if (memq backend greader-backends)
 	  (setq greader-actual-backend backend)
@@ -344,16 +352,16 @@ For example, if you specify a function that gets a sentence, you should specify 
 	(greader-read-asynchronous ". end")))))
 
 (defun greader-set-reading-keymap ()
-  (if (assoc 'greader minor-mode-map-alist)
+  (if (assoc 'greader-mode minor-mode-map-alist)
       (progn
 	(setq minor-mode-map-alist (assq-delete-all 'greader minor-mode-map-alist))
-	(setq minor-mode-map-alist (push `(greader . ,greader-reading-map) minor-mode-map-alist)))))
+	(setq minor-mode-map-alist (push `(greader-mode . ,greader-reading-map) minor-mode-map-alist)))))
 
 (defun greader-set-greader-keymap ()
-  (if (assoc 'greader minor-mode-map-alist)
+  (if (assoc 'greader-mode minor-mode-map-alist)
       (progn
 	(setq minor-mode-map-alist (assq-delete-all 'greader minor-mode-map-alist))
-	(setq minor-mode-map-alist (push `(greader . ,greader-map) minor-mode-map-alist)))))
+	(setq minor-mode-map-alist (push `(greader-mode . ,greader-map) minor-mode-map-alist)))))
 
 (defun greader-stop ()
   "stops reading of document."
