@@ -119,5 +119,5 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
      "-w")
     (_
      'not-implemented)))
-
+(put 'greader-speechd 'greader-backend-name "greader-speechd")
 (provide 'greader-speechd)

@@ -80,5 +80,5 @@ this variable determines authomatically if espeak is present in your PATH enviro
     
     (_
      'not-implemented)))
-
+(put 'greader-espeak 'greader-backend-name "greader-espeak")
 (provide 'greader-espeak)
