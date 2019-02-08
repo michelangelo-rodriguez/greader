@@ -208,7 +208,7 @@ For example, if you specify a function that gets a sentence, you should specify 
 	(completing-read"back-end:" (greader--get-backends)))))
   (if (functionp backend)
       (if (memq backend greader-backends)
-	  (setq greader-actual-backend backend)
+	  (setq-local greader-actual-backend backend)
 	(error "%s" "The function you have specified is not a greader's back-end.")))
   (if (stringp backend)
       (progn
@@ -219,7 +219,7 @@ For example, if you specify a function that gets a sentence, you should specify 
 		 (get elem 'greader-backend-name) backend)
 		(setq result elem)))
 	  (if result
-	      (setq greader-actual-backend result)
+	      (setq-local greader-actual-backend result)
 	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
   (if (not backend)
       (let
