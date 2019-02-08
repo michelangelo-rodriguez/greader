@@ -1,6 +1,7 @@
 ;;; greader.el --- gnamù reader, a reader with espeak tts  -*- lexical-binding: t; -*-
-					;Copyright (C) 2019 by Michelangelo Rodriguez
-;; Copyright (C) 2017  Michelangelo Rodriguez
+
+;; Copyright (C) 2017-2019  Free Software Foundation, Inc.
+
 ;; package-requires: ((emacs "25"))
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
 ;; Keywords: tools
@@ -21,12 +22,13 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;;; to start using greader, you have to install espeak and/or speech-dispatcher, and make sure those packages work correctly.
 
-;;; In order to read a buffer:
-;;; 'M-x greader'
-;;; 'C-r <spc>'
-;; 
+;; To start using greader, you have to install espeak and/or speech-dispatcher,
+;; and make sure those packages work correctly.
+
+;; In order to read a buffer:
+;; 'M-x greader'
+;; 'C-r <spc>'
 
 ;;; Code:
 
