@@ -160,6 +160,13 @@ the variable `greader-move-to-next-chung' must be set to a function that moves t
 For example, if you specify a function that gets a sentence, you should specify a function that moves to the next one."
   :type 'function
   :tag "greader get chung of text function")
+(defcustom greader-use-prefix t
+  "if set to t, when you call `greader-read', that function sets a
+  register that points to the actual position in buffer.
+  when you call again `greader-read' with a prefix argument, the point
+  is set at register position then reading starts from there."
+  :type 'boolean
+  :tag "use register")
 (defvar greader-prefix-map (make-sparse-keymap))
 (defvar greader-map (make-sparse-keymap))
 (defvar greader-reading-map (make-sparse-keymap))
