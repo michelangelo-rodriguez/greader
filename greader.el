@@ -198,6 +198,16 @@ For example, if you specify a function that gets a sentence, you should specify 
 	  (greader-toggle-timer))))
   (greader-load-backends))
 ;;;code
+(defun greader-set-register ()
+  "sets the `?G' to the point in current buffer."
+  (when greader-use-prefix
+    (point-to-register ?G)))
+
+(defun greader-jump-to-register ()
+  "jumps to register `?G' if `greader-use-prefix' is enabled."
+  (when greader-use-prefix
+    (jump-to-register ?G)))
+
 (defun greader--get-backends ()
   "returns actual available back-ends, as a list of strings."
   (let (b)
@@ -347,9 +357,9 @@ For example, if you specify a function that gets a sentence, you should specify 
   if `greader-use-marker' is t and if you pass a prefix to this function, point jumps at the last position you called greader-read."
   (interactive "P")
   (when goto-marker
-    (jump-to-register ?G))
+    (greader-jump-to-register))
   (when (called-interactively-p 'any)
-    (point-to-register ?G))
+    (greader-set-register))
   (if (and greader-tired-flag (= greader-elapsed-time 0))
       (progn
 	(if greader-tired-timer
