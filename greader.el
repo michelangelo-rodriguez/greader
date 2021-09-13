@@ -1,6 +1,6 @@
 ;;; greader.el --- gnamù reader, a reader with espeak tts  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017-2019  Free Software Foundation, Inc.
+;; Copyright (C) 2017-2021  Free Software Foundation, Inc.
 
 ;; package-requires: ((emacs "25"))
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
@@ -179,9 +179,8 @@ For example, if you specify a function that gets a sentence, you should specify 
 (define-key greader-map (kbd "C-r b") 'greader-change-backend)
 (define-minor-mode greader-mode
   nil
-  nil
-  " greader"
-  greader-map
+  :lighter " greader"
+  :keymap greader-map
   :group greader
   (if greader-mode
       (if greader-auto-tired-mode
@@ -336,9 +335,13 @@ For example, if you specify a function that gets a sentence, you should specify 
   (funcall greader-move-to-next-chung)
   (funcall 'greader-read))
 
-(defun greader-read ()
+(defun greader-read (&optional goto-marker)
   "starts reading of current buffer."
-  (interactive)
+  (interactive "P")
+  (when goto-marker
+    (jump-to-register ?G))
+  (when (called-interactively-p 'any)
+    (point-to-register ?G))
   (if (and greader-tired-flag (= greader-elapsed-time 0))
       (progn
 	(if greader-tired-timer
@@ -778,3 +781,4 @@ new lines can be either in unix stile, or ms, or macosX."
   (print (text-properties-at (point))))
 (provide 'greader)
 ;;; greader.el ends here
+
