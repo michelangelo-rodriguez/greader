@@ -336,7 +336,8 @@ For example, if you specify a function that gets a sentence, you should specify 
   (funcall 'greader-read))
 
 (defun greader-read (&optional goto-marker)
-  "starts reading of current buffer."
+  "starts reading of current buffer.
+  if `greader-use-marker' is t and if you pass a prefix to this function, point jumps at the last position you called greader-read."
   (interactive "P")
   (when goto-marker
     (jump-to-register ?G))
