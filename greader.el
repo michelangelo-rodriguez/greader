@@ -1,4 +1,5 @@
-;;; greader.el --- gnamù reader, a reader with espeak tts  -*- lexical-binding: t; -*-
+;;; greader.el --- gnamù reader, a reader with espeak tts and
+;;; extensible back-ends. -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2017-2021  Free Software Foundation, Inc.
 
@@ -61,7 +62,7 @@
 (defvar greader-not-start-of-sentence '(" " "\n" "\t"))
 (defvar greader-end-of-sentence '("." "?" "!" ":"))
 (defvar greader-debug-buffer "spd-output"
-  "contains the buffer name for debugging purposes.")
+  "Contains the buffer name for debugging purposes.")
 (defvar greader-backend-action 'greader--default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
@@ -70,7 +71,7 @@
 (defgroup
   greader
   nil
-  "greader customization"
+  "Greader customization."
   :group 'convenience)
 
 (defcustom
@@ -82,7 +83,7 @@
 (defcustom
   greader-actual-backend
   'greader-espeak
-  "greader back-end to use"
+  "Greader back-end to use."
   :tag "greader actual back-end"
   :type
   `(radio
@@ -93,77 +94,91 @@
 (defcustom
   greader-auto-tired-mode-time
   "22"
-  "specifies the hour when tired mode will be activated automatically."
+  "Specifies the hour when tired mode will be activated automatically."
   :tag "greader-tired-mode start time"
   :type 'string)
 
 (defcustom
   greader-auto-tired-time-end
   "07"
-  "specifies when auto tired mode should be disabled.
-For more information on syntax, see documentation of greader-auto-tired-mode-time."
+  "Specifies when auto tired mode should be disabled.
+For more information on syntax, see documentation of
+`greader-auto-tired-mode-time'."
   :tag "greader auto tired end time"
   :type 'string)
 
 (defcustom
   greader-auto-tired-mode
   nil
-  "if t, auto-tired-mode is enabled, and tired mode will be turned up at a time specified wit greader-auto-tired-mode-time and disabled at greader-auto-tired-mode-end-time automatically."
+  "Enable or disable`auto-tired-mode'.
+If t, auto-tired-mode is enabled, and
+tired mode will be turned on at a time specified with
+`greader-auto-tired-mode-time' and disabled at
+`greader-auto-tired-mode-end-time' automatically."
   :tag "greader auto tired mode"
   :type 'boolean)
 
 (defcustom
   greader-tired-time
   60
-  "sets when, in seconds after a timer stop, the point must be moved to the last position have you called greader-read."
+  "Auto tired mode.
+Sets when, in seconds after a timer stop, the point must be moved
+to the last position have you called command `greader-read'."
   :type 'integer
   :tag "greader seconds for tired mode")
+
 (defcustom
   greader-soft-timer
   t
-  "if enabled, reading of text will end not exactly at time expiration but after the end of sentence actually spoken."
+  "If enabled, reading of text will end not exactly at time expiration.
+Instead, the sentence will be read completely."
   :tag "greader soft timer"
   :type 'boolean)
+
 (defcustom
   greader-timer
   10
-  "minutes for timer to stop reading"
+  "Minutes for timer to stop reading."
   :type 'integer
   :tag "time to stop reading")
 
 (defcustom
   greader-debug
   nil
-  "enables debug information"
+  "Enables debug information."
   :tag "enable debug"
   :type 'boolean)
 
-(defcustom
-  greader-hook
-  nil
-  "hook ran after mode activation.
-through this hook you can customize your key definitions for greader, for example."
+(defcustom   greader-hook nil
+  "Hook ran after mode activation.
+through this hook you can
+customize your key definitions for greader, for example."
   :tag "greader-mode hook"
   :type 'hook)
 
 (defcustom greader-move-to-next-chung
   'greader-forward-sentence
-  "sets the function that moves the cursor for the next chung of text.
-For example if you have specified `sentence-at-point' function to get the actual chung, you should specify `forward-sentence' for this variable."
+  "Sets the function that moves the cursor for the next chung of text.
+For example if you have specified `sentence-at-point' function to get
+the actual chung, you should specify `forward-sentence' for this
+variable."
   :tag "greader move to next chung function"
   :type 'function)
 
 (defcustom greader-read-chung-of-text
   'greader-sentence-at-point
-  "sets the function used to get the portion of text to read.
-the variable `greader-move-to-next-chung' must be set to a function that moves the cursor to the same amount of text that is set in this variable.
-For example, if you specify a function that gets a sentence, you should specify a function that moves to the next one."
+  "Sets the function used to get the portion of text to read.
+The variable `greader-move-to-next-chung' must be set to a function that
+moves the cursor to the same amount of text that is set in this
+variable.  For example, if you specify a function that gets a
+sentence, you should specify a function that moves to the next one."
   :type 'function
   :tag "greader get chung of text function")
 (defcustom greader-use-prefix t
-  "if set to t, when you call `greader-read', that function sets a
+  "Toggle on or off for use register feature.
+if set to t, when you call function `greader-read', that function sets a
   register that points to the actual position in buffer.
-  when you call again `greader-read' with a prefix argument, the point
+  when you call again function `greader-read' with a prefix argument, the point
   is set at register position then reading starts from there."
   :type 'boolean
   :tag "use register")
@@ -199,23 +214,26 @@ For example, if you specify a function that gets a sentence, you should specify 
   (greader-load-backends))
 ;;;code
 (defun greader-set-register ()
-  "sets the `?G' to the point in current buffer."
+  "Set the `?G' to the point in current buffer."
   (when greader-use-prefix
     (point-to-register ?G)))
 
 (defun greader-jump-to-register ()
-  "jumps to register `?G' if `greader-use-prefix' is enabled."
+  "Jump to register `?G' if `greader-use-prefix' is enabled."
   (when greader-use-prefix
     (jump-to-register ?G)))
 
 (defun greader--get-backends ()
-  "returns actual available back-ends, as a list of strings."
+  "Return actual available back-ends, as a list of strings."
   (let (b)
     (dolist (greader-elem greader-backends nil)
       (setq b (append b `(,(get greader-elem 'greader-backend-name)))))
     b))
 
 (defun greader-call-backend (command &optional arg)
+  "Call BACKEND passing it COMMAND and ARG.
+\(internal use!\)."
+
   (if arg
       (funcall greader-actual-backend command arg)
     (funcall greader-actual-backend command)))
@@ -225,7 +243,8 @@ For example, if you specify a function that gets a sentence, you should specify 
 (defvar greader-backend `(,greader-backend-filename))
 
 (defun greader-change-backend (&optional backend)
-  "changes back-end. if backend is specified, it changes to backend, else it cycles throwgh available back-ends."
+  "Change BACKEND.
+if backend is specified, it changes to backend, else it cycles throwgh available backends."
   (interactive
    (list
     (if current-prefix-arg
@@ -256,11 +275,11 @@ For example, if you specify a function that gets a sentence, you should specify 
   (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
 
 (defun greader-load-backends ()
-  "loads backends taken from greader-backends."
+  "Load backends taken from `greader-backends'."
   (mapcar 'require greader-backends))
 
 (defun greader-read-asynchronous (txt)
-  "reads the text given in txt."
+  "Read the text given in TXT."
   (if greader-debug
       (greader-debug "greader-read-asynchronous entered\n"))
   (greader-build-args)
@@ -282,16 +301,19 @@ For example, if you specify a function that gets a sentence, you should specify 
 	  (greader-debug (message "greader-read-asynchronous: %S" backend))))))
 
 (defun greader-get-status ()
+  "Return greader status."
   greader-status)
 
 (defun greader-change-status (arg)
+  "Change status of greader using ARG."
   (if greader-debug
       (greader-debug "greader-change-status entered"))
   (if (symbolp arg)
       (setq greader-status arg)
-    (error "status must be a symbol!")))
+    (error "Status must be a symbol!")))
 
 (defun greader-action (process event)
+  "Sentinel for greader processes using PROCESS and EVENT."
   (if greader-debug
       (progn
 	(greader-debug "greader-action entered.\n")
@@ -300,6 +322,7 @@ For example, if you specify a function that gets a sentence, you should specify 
     (funcall greader-backend-action process event)))
 
 (defun greader-tts-stop ()
+"Stop reading of current buffer."
   (set-process-sentinel greader-synth-process 'greader--default-action)
   (if
       (not
@@ -310,6 +333,7 @@ For example, if you specify a function that gets a sentence, you should specify 
   (setq-local greader-backend-action 'greader--default-action))
 
 (defun greader--default-action (&optional process event)
+  "Internal use."
   (if greader-debug
       (greader-debug (format "greader--default-action entered.\nevent: %S\n" event)))
   (cond
@@ -321,6 +345,7 @@ For example, if you specify a function that gets a sentence, you should specify 
     (greader-set-greader-keymap))))
 
 (defun greader-build-args ()
+  "Build the string that will be passed to the back-end."
   (greader-reset)
   (let (args arg)
     (setq arg
@@ -345,16 +370,19 @@ For example, if you specify a function that gets a sentence, you should specify 
     (setq greader-backend (append `(,greader-backend) args))))
 
 (defun greader-reset ()
+  "Reset greader."
   (setq greader-backend `(,(greader-call-backend 'executable))))
 (defun greader-next-action (process event)
+  "Perform next action when reading."
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
   (funcall greader-move-to-next-chung)
   (funcall 'greader-read))
 
 (defun greader-read (&optional goto-marker)
-  "starts reading of current buffer.
-  if `greader-use-marker' is t and if you pass a prefix to this function, point jumps at the last position you called greader-read."
+  "Start reading of current buffer.
+if `greader-use-marker' is t and if you pass a prefix to this
+  function, point jumps at the last position you called command `greader-read'."
   (interactive "P")
   (when goto-marker
     (greader-jump-to-register))
@@ -381,19 +409,21 @@ For example, if you specify a function that gets a sentence, you should specify 
 	(greader-read-asynchronous ". end")))))
 
 (defun greader-set-reading-keymap ()
+  "Set greader's keymap when reading."
   (if (assoc 'greader-mode minor-mode-map-alist)
       (progn
 	(setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
 	(setq minor-mode-map-alist (push `(greader-mode . ,greader-reading-map) minor-mode-map-alist)))))
 
 (defun greader-set-greader-keymap ()
+  "Set greader's keymap when not reading."
   (if (assoc 'greader-mode minor-mode-map-alist)
       (progn
 	(setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
 	(setq minor-mode-map-alist (push `(greader-mode . ,greader-map) minor-mode-map-alist)))))
 
 (defun greader-stop ()
-  "stops reading of document."
+  "Stops reading of document."
   (interactive)
   (cond
    ((and (> greader-elapsed-time 0) greader-timer-flag)
@@ -405,17 +435,20 @@ For example, if you specify a function that gets a sentence, you should specify 
   (greader-set-greader-keymap)
   (greader-tts-stop))
 (defun greader-debug (arg)
+  "Used to get some fast debugging."
   (save-current-buffer
     (get-buffer-create greader-debug-buffer)
     (set-buffer greader-debug-buffer)
     (insert arg)))
 
 (defun greader-punct-p (arg)
+  "Return t if ARG is a punctuation symbol."
   (if (member arg greader-end-of-sentence)
       t
     nil))
 
 (defun greader-next-sentence (&optional direction)
+  "Get next sentence to read."
   (if (not direction)
       (setq direction 1))
   (if (< direction 0)
@@ -440,9 +473,11 @@ For example, if you specify a function that gets a sentence, you should specify 
     (funcall point-limit)))
 
 (defun greader-forward-sentence ()
+  "Bring point at start of next sentence to read."
   (goto-char (greader-next-sentence)))
 
 (defun greader-get-sentence (&optional direction)
+  "Get next sentence to read."
   (if (not direction)
       (setq direction 1))
   (if (< direction 0)
@@ -467,9 +502,11 @@ For example, if you specify a function that gets a sentence, you should specify 
 	sentence))))
 
 (defun greader-sentence-at-point ()
+  "Get sentence starting from point."
   (greader-get-sentence))
 
 (defun greader-end-sentence-p ()
+  "Return t if current character is considered an end of sentence."
   (catch 'endsentence
     (save-excursion
       (if (eobp)
@@ -484,20 +521,23 @@ For example, if you specify a function that gets a sentence, you should specify 
 	nil))))
 
 (defun greader-process-filter (process string)
+  "Process filter."
   (if greader-filter-enabled
       (message string)))
 
 (defun greader-set-language (lang)
-  "sets language of tts.
-The language must be in ISO code, for example 'en' for english or 'fr' for french.
-This function sets the language of tts local for current buffer, so if you want to set it globally, please use 'm-x customize-option <RET> greader-language <RET>'."
+  "Set language of tts.
+LANG must be in ISO code, for example 'en' for english or 'fr'
+for french.  This function sets the language of tts local for current
+buffer, so if you want to set it globally, please use 'm-x customize-option <RET> greader-language <RET>'."
   (interactive "sset language to:")
   (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
+  "Set punctuation to FLAG."
   (greader-call-backend 'punctuation flag))
 
 (defun greader-toggle-punctuation ()
-  "Toggles punctuation locally for current buffer."
+  "Toggle punctuation locally for current buffer."
   (interactive)
   (if (not (greader-call-backend 'punctuation))
       (progn
@@ -524,6 +564,9 @@ This function sets the language of tts local for current buffer, so if you want 
     (setq-local greader-timer-flag t))))
 
 (defun greader-toggle-timer ()
+  "Toggle on or off timer when reading.
+To configure the timer \(in minutes\) call `M-x greader-set-timer' or
+  `C-r t'."
   (interactive)
   (greader-toggle-timer-flag)
   (if greader-timer-flag
@@ -537,7 +580,7 @@ This function sets the language of tts local for current buffer, so if you want 
       (message "timer disabled in current buffer"))))
 
 (defun greader-set-timer (&optional timer-in-mins)
-  "sets timer for reading expressed in minutes.
+  "Set timer for reading expressed in minutes.
 This command should be used only if you want to set locally a timer different of that you set via customize, that is considered the default value for this variable."
 
   (interactive "Nset timer for:")
@@ -551,7 +594,7 @@ This command should be used only if you want to set locally a timer different of
     nil))
 
 (defun greader-setup-timers ()
-  "set up timers, that is, call run-at-time using settings you have specified."
+  "Set up timers, that is, call `run-at-time' using settings you have specified."
   (catch 'timer-is-nil
     (cond
      ((greader-timer-flag-p)
@@ -577,9 +620,9 @@ This command should be used only if you want to set locally a timer different of
   (setq-local greader-elapsed-time 0))
 
 (defun greader-stop-with-timer ()
-  "stops reading of buffer and also reset timer.
+  "Stops reading of buffer and also reset timer.
 If you use this command, next reading will start timer at its current value.
-If you stops normally with greader-stop, next reading will continue from the time elapsed before you stopped."
+If you stop normally with `greader-stop', next reading will continue from the time elapsed before you stopped."
   (interactive)
   (if (greader-timer-flag-p)
       (progn
@@ -590,7 +633,7 @@ If you stops normally with greader-stop, next reading will continue from the tim
   (greader-stop))
 
 (defun greader-stop-timer-callback ()
-  "function called when timer expires."
+  "Function called when timer expires."
   (if greader-tired-flag
       (greader-setup-tired-timer))
   (cond
@@ -616,8 +659,11 @@ If you stops normally with greader-stop, next reading will continue from the tim
     (setq-local greader-tired-flag t)))
 
 (defun greader-toggle-tired-mode ()
-  "toggles tired mode.
-if tired mode is enabled, when a timer expires, greader will wait an amount of time customizable, and if emacs remains iddle for that time, point in buffer will be placed at last position where you called greader-read.
+  "Toggle tired mode.
+if tired mode is enabled, when a timer expires, greader will wait an
+  amount of time customizable, and if Emacs remains iddle for that
+  time, point in buffer will be placed at last position where you
+  called command `greader-read'.
 Enabling tired mode implicitly enables timer also."
   (interactive)
   (if (not greader-tired-flag)
@@ -658,6 +704,7 @@ Enabling tired mode implicitly enables timer also."
       (if greader-tired-flag
 	  (greader-toggle-tired-mode))
       (setq-local greader-auto-tired-timer (cancel-timer greader-auto-tired-timer)))))
+
 (defun greader-toggle-auto-tired-mode-flag ()
   (if greader-auto-tired-mode
       (progn
@@ -668,15 +715,13 @@ Enabling tired mode implicitly enables timer also."
       (setq-local greader-auto-tired-mode t)
       (greader-auto-tired-mode-setup))))
 
-(defun greader-toggle-auto-tired-mode ()
-  "Enables auto tired mode.
-In this mode, greader will enter in tired mode at a customizable time and will exit from it at another time.
-The default is 22:00 for entering and 08:00 for exiting."
-  (interactive)
-  (greader-toggle-auto-tired-mode-flag)
-  (if greader-auto-tired-mode
-      (message "auto-tired mode enabled in current buffer")
-    (message "auto-tired mode disabled in current buffer.")))
+(defun greader-toggle-auto-tired-mode () "Enable auto tired mode.
+In this mode, greader will enter in tired mode at a customizable time
+  and will exit from it at another time.  The default is 22:00 for
+  entering and 08:00 for exiting."  (interactive)
+  (greader-toggle-auto-tired-mode-flag) (if greader-auto-tired-mode
+  (message "auto-tired mode enabled in current buffer") (message
+  "auto-tired mode disabled in current buffer.")))
 
 (defun greader-current-time ()
   (string-to-number (format-time-string "%H")))
@@ -730,14 +775,14 @@ The default is 22:00 for entering and 08:00 for exiting."
 	(greader-toggle-tired-mode))))
 
 (defun greader-set-rate (n)
-  "sets rate in current buffer to tthe specified value in n. rate is expressed in words per minute.
-For maximum value, see 'man espeak'."
+  "Set rate in current buffer to tthe specified value in N.
+rate is expressed in words per minute.  For maximum value, see 'man espeak'."
   (greader-call-backend 'rate n))
 
 
 (defun greader-inc-rate (&optional n)
-  "increments rate of speech by 10 units.
-If prefix, it will be used to increment by that."
+  "Increment rate of speech by N units.
+If prefix, it will be used to increment by that.  Default is N=10."
   (interactive "P")
   (if (not n)
       (setq n 10))
@@ -746,7 +791,7 @@ If prefix, it will be used to increment by that."
   (greader-read))
 
 (defun greader-dec-rate (&optional n)
-  "decrements rate of speech by units specified in n.
+  "Decrements rate of speech by units specified in N.
 If prefix, it will be used to decrement  rate."
   (interactive "P")
   (if (not n)
@@ -756,7 +801,7 @@ If prefix, it will be used to decrement  rate."
   (greader-read))
 
 (defun greader-sentence-needs-dehyphenation (str)
-  "returns t if str has lines iphenated."
+  "Return t if STR has lines iphenated."
   (let
       ((i 0)
        (j 0))
@@ -772,7 +817,7 @@ If prefix, it will be used to decrement  rate."
 	  nil))))
 
 (defun greader-dehyphenate (str)
-  "dehyphenates str.
+  "Dehyphenate STR.
 new lines can be either in unix stile, or ms, or macosX."
   (let
       ((new-sentence "")
@@ -794,7 +839,7 @@ new lines can be either in unix stile, or ms, or macosX."
 	(cl-incf i)))
     new-sentence))
 (defun greader-get-attributes ()
-  "prints text properties associated with current char."
+  "Print text properties associated with current char."
   (interactive)
   (print (text-properties-at (point))))
 (provide 'greader)
