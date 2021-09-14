@@ -199,6 +199,8 @@ if set to t, when you call function `greader-read', that function sets a
 (define-key greader-reading-map (kbd "-") 'greader-dec-rate)
 (define-key greader-map (kbd "C-r f") 'greader-get-attributes)
 (define-key greader-map (kbd "C-r b") 'greader-change-backend)
+
+					;###autoload
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
@@ -214,7 +216,7 @@ if set to t, when you call function `greader-read', that function sets a
   (greader-load-backends))
 ;;;code
 (defun greader-set-register ()
-  "Set the `?G' to the point in current buffer."
+  "Set the `?G' register to the point in current buffer."
   (when greader-use-prefix
     (point-to-register ?G)))
 
