@@ -401,6 +401,11 @@ if `greader-use-marker' is t and if you pass a prefix to this
   (let ((chung (funcall greader-read-chung-of-text)))
     (if chung
 	(progn
+					; this extra verification is necessary because espeak has a bug that,
+					; when we pass a string containing a vocal plus only 2 .. it reads
+					; garbage.
+	  (if (string-suffix-p ".." chung)
+	      (setq chung (concat chung ".")))
 	  (greader-set-reading-keymap)
 	  (setq-local greader-read 'greader-read)
 	  (setq-local greader-backend-action 'greader-next-action)
