@@ -1,7 +1,6 @@
-;;; greader.el --- gnamù reader, a reader with espeak tts and
-;;; extensible back-ends. -*- lexical-binding: t; -*-
+;;; greader.el --- gnamù reader, send buffer contents to a speech engine. -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2017-2021  Free Software Foundation, Inc.
+;; Copyright (C) 2017-2022  Free Software Foundation, Inc.
 
 ;; package-requires: ((emacs "25"))
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
@@ -243,10 +242,14 @@ if set to t, when you call function `greader-read', that function sets a
   greader-backend-filename
   (greader-call-backend 'executable))
 (defvar greader-backend `(,greader-backend-filename))
-
+(defvar greader-orig-buffer nil)
+(defvar greader-dissoc-buffer "*Dissociation*")
+(defvar greader-temp-function nil)
 (defun greader-change-backend (&optional backend)
-  "Change BACKEND.
-if backend is specified, it changes to backend, else it cycles throwgh available backends."
+  "Change BACKEND used for actually read the buffer.
+If backend is
+specified, it changes to backend, else it cycles throwgh available
+backends."
   (interactive
    (list
     (if current-prefix-arg
@@ -334,8 +337,10 @@ if backend is specified, it changes to backend, else it cycles throwgh available
   (delete-process greader-synth-process)
   (setq-local greader-backend-action 'greader--default-action))
 
-(defun greader--default-action (&optional process event)
-  "Internal use."
+(defun greader--default-action (&optional _process event)
+  "Internal use.
+Optional argument PROCESS
+Optional argument EVENT ."
   (if greader-debug
       (greader-debug (format "greader--default-action entered.\nevent: %S\n" event)))
   (cond
@@ -374,8 +379,10 @@ if backend is specified, it changes to backend, else it cycles throwgh available
 (defun greader-reset ()
   "Reset greader."
   (setq greader-backend `(,(greader-call-backend 'executable))))
-(defun greader-next-action (process event)
-  "Perform next action when reading."
+(defun greader-next-action (_process event)
+  "Perform next action when reading.
+Argument PROCESS .
+Argument EVENT ."
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
   (funcall greader-move-to-next-chung)
@@ -383,7 +390,7 @@ if backend is specified, it changes to backend, else it cycles throwgh available
 
 (defun greader-read (&optional goto-marker)
   "Start reading of current buffer.
-if `greader-use-marker' is t and if you pass a prefix to this
+if `GOTO-MARKER' is t and if you pass a prefix to this
   function, point jumps at the last position you called command `greader-read'."
   (interactive "P")
   (when goto-marker
@@ -415,6 +422,39 @@ if `greader-use-marker' is t and if you pass a prefix to this
 	(greader-set-greader-keymap)
 	(greader-read-asynchronous ". end")))))
 
+(defun greader-response-for-dissociate (&optional _prompt)
+  "Return t to the caller until a condition is reached.
+This function will be locally bound to `y.or-n-p' until
+`dissociated-press' does the job.
+Optional argument PROMPT variable not used."
+  (with-current-buffer greader-orig-buffer
+    (if (< (buffer-size greader-dissoc-buffer) 100000)
+      t
+      nil)))
+
+(defun greader-read-dissociated ()
+  "Use `dissociated-press to read a text dissociately.
+\(Helpful for
+mindfullness!)."
+  (interactive)
+  (setq greader-orig-buffer (current-buffer))
+  (setq greader-dissoc-buffer (get-buffer-create "*Dissociation*"))
+  (unwind-protect
+      (progn
+	(fset 'greader-temp-function (symbol-function 'y-or-n-p))
+	(fset 'y-or-n-p (symbol-function
+			 'greader-response-for-dissociate))
+	(let ((arg (random 10)))
+	  (while (equal arg 0)
+	    (setq arg (random 10)))
+	  (dissociated-press arg))
+	(switch-to-buffer greader-dissoc-buffer)
+	(goto-char (point-min))
+
+	(greader-mode 1)
+	(greader-read))
+    (fset 'y-or-n-p (symbol-function 'greader-temp-function))))
+
 (defun greader-set-reading-keymap ()
   "Set greader's keymap when reading."
   (if (assoc 'greader-mode minor-mode-map-alist)
@@ -442,7 +482,8 @@ if `greader-use-marker' is t and if you pass a prefix to this
   (greader-set-greader-keymap)
   (greader-tts-stop))
 (defun greader-debug (arg)
-  "Used to get some fast debugging."
+  "Used to get some fast debugging.
+Argument ARG is not used."
   (save-current-buffer
     (get-buffer-create greader-debug-buffer)
     (set-buffer greader-debug-buffer)
@@ -455,7 +496,9 @@ if `greader-use-marker' is t and if you pass a prefix to this
     nil))
 
 (defun greader-next-sentence (&optional direction)
-  "Get next sentence to read."
+  "Get next sentence to read.
+Optional argument DIRECTION used for determining the direction in
+which search for."
   (if (not direction)
       (setq direction 1))
   (if (< direction 0)
@@ -484,7 +527,8 @@ if `greader-use-marker' is t and if you pass a prefix to this
   (goto-char (greader-next-sentence)))
 
 (defun greader-get-sentence (&optional direction)
-  "Get next sentence to read."
+  "Get next sentence to read.
+Optional argument DIRECTION is actually not used."
   (if (not direction)
       (setq direction 1))
   (if (< direction 0)
@@ -527,16 +571,19 @@ if `greader-use-marker' is t and if you pass a prefix to this
 	  t
 	nil))))
 
-(defun greader-process-filter (process string)
-  "Process filter."
+(defun greader-process-filter (_process string)
+  "Process filter.
+Optional argument STRING contains the string passed to
+`greader-read-asynchronous'."
   (if greader-filter-enabled
       (message string)))
 
 (defun greader-set-language (lang)
   "Set language of tts.
-LANG must be in ISO code, for example 'en' for english or 'fr'
-for french.  This function sets the language of tts local for current
-buffer, so if you want to set it globally, please use 'm-x customize-option <RET> greader-language <RET>'."
+LANG must be in ISO code, for example 'en' for english or 'fr' for
+french.  This function set the language of tts local for current
+buffer, so if you want to set it globally, please use 'm-x
+`customize-option' <RET> greader-language <RET>'."
   (interactive "sset language to:")
   (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
@@ -559,6 +606,7 @@ buffer, so if you want to set it globally, please use 'm-x customize-option <RET
       (greader-read))))
 
 (defun greader-toggle-timer-flag ()
+"Not yet documented."
   (cond
    (greader-timer-flag
     (setq-local greader-timer-flag nil)
@@ -588,7 +636,11 @@ To configure the timer \(in minutes\) call `M-x greader-set-timer' or
 
 (defun greader-set-timer (&optional timer-in-mins)
   "Set timer for reading expressed in minutes.
-This command should be used only if you want to set locally a timer different of that you set via customize, that is considered the default value for this variable."
+This command should be
+used only if you want to set locally a timer different of that you set
+via customize, that is considered the default value for this
+variable.
+Optional argument TIMER-IN-MINS timer in minutes (integer)."
 
   (interactive "Nset timer for:")
   (if (not (greader-timer-flag-p))
@@ -596,6 +648,7 @@ This command should be used only if you want to set locally a timer different of
   (setq-local greader-timer timer-in-mins))
 
 (defun greader-timer-flag-p ()
+  "Not yet documented."
   (if greader-timer-flag
       t
     nil))
@@ -612,24 +665,31 @@ This command should be used only if you want to set locally a timer different of
   t)
 
 (defun greader-elapsed-time ()
+  "Not documented (internal use)."
   (setq-local greader-elapsed-time (1+ greader-elapsed-time)))
 
 (defun greader-convert-mins-to-secs (mins)
+  "Convert MINS in seconds."
   (* mins 60))
 
 (defun greader-cancel-stop-timer ()
+  "Not documented, internal use."
   (cancel-timer greader-stop-timer))
 
 (defun greader-cancel-elapsed-timer ()
+  "Not documented, internal use."
   (cancel-timer greader-elapsed-timer))
 
 (defun greader-reset-elapsed-time ()
+  "Not documented, internal use."
   (setq-local greader-elapsed-time 0))
 
 (defun greader-stop-with-timer ()
-  "Stops reading of buffer and also reset timer.
-If you use this command, next reading will start timer at its current value.
-If you stop normally with `greader-stop', next reading will continue from the time elapsed before you stopped."
+  "Stop reading of buffer and also reset timer.
+If you use this
+command, next reading will start timer at its current value.  If you
+stop normally with `greader-stop', next reading will continue from the
+time elapsed before you stopped."
   (interactive)
   (if (greader-timer-flag-p)
       (progn
@@ -650,11 +710,16 @@ If you stop normally with `greader-stop', next reading will continue from the ti
     (greader-stop))))
 
 (defun greader-soft-timer-p ()
+  "Return t if soft-timer is enabled.
+With soft timer, greader will stop reading at the end of sentence is
+  actually reading.
+If it is disabled, greader will stop reading immediately after timer expiration."
   (if greader-soft-timer
       t
     nil))
 
 (defun greader-toggle-tired-flag ()
+  "Not documented, internal use."
   (if greader-tired-flag
       (progn
 	(if greader-timer-flag
@@ -687,6 +752,7 @@ Enabling tired mode implicitly enables timer also."
       (message "tired mode disabled in current buffer"))))
 
 (defun greader-setup-tired-timer ()
+  "Not documented, internal use."
   (if greader-tired-flag
       (run-with-idle-timer
        (time-add
@@ -695,13 +761,16 @@ Enabling tired mode implicitly enables timer also."
 	 greader-tired-time)) nil 'greader-tired-mode-callback)))
 
 (defun greader-tired-mode-callback ()
+"Not documented, internal use."
   (if (equal last-command 'greader-read)
       (greader-move-to-last-point)))
 
 (defun greader-move-to-last-point ()
+  "Not documented, internal use."
   (goto-char greader-last-point))
 
 (defun greader-auto-tired-mode-setup ()
+  "Not documented, internal use."
   (if greader-auto-tired-mode
       (progn
 	(if (not greader-tired-flag)
@@ -713,6 +782,7 @@ Enabling tired mode implicitly enables timer also."
       (setq-local greader-auto-tired-timer (cancel-timer greader-auto-tired-timer)))))
 
 (defun greader-toggle-auto-tired-mode-flag ()
+  "Not documented, internal use."
   (if greader-auto-tired-mode
       (progn
 	(setq-local greader-auto-tired-mode nil)
@@ -731,9 +801,11 @@ In this mode, greader will enter in tired mode at a customizable time
   "auto-tired mode disabled in current buffer.")))
 
 (defun greader-current-time ()
+  "Not documented, internal use."
   (string-to-number (format-time-string "%H")))
 
 (defun greader-convert-time (time)
+  "Not documented, internal use."
   (let ((current-t (decode-time))
 	(i (nth 2 (decode-time)))
 	(counter (nth 2 (decode-time))))
@@ -753,6 +825,7 @@ In this mode, greader will enter in tired mode at a customizable time
     (apply 'encode-time current-t)))
 
 (defun greader-current-time-in-interval-p (time1 time2)
+  "Not documented, internal use."
   (let
       ((current-t (current-time)))
     (if
@@ -761,6 +834,7 @@ In this mode, greader will enter in tired mode at a customizable time
       nil)))
 
 (defun greader-auto-tired-callback ()
+  "Not documented, internal use."
   (if
       (stringp greader-auto-tired-mode-time)
       (setq-local greader-auto-tired-mode-time (greader-convert-time greader-auto-tired-mode-time)))

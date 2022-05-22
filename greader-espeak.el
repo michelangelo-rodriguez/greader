@@ -15,17 +15,22 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+;;; Commentary:
+;; 
+
 ;;; Code:
 
 (defgroup greader-espeak
   nil
-  "back-end of espeak for greader."
+  "Back-end of espeak for greader."
   :group 'greader
   )
 ;;; customization
 (defcustom greader-espeak-language "en"
-  "specifies the language of this back-end. For a comprehensive list of languages and voices available in espeak type in a terminal:
-espeak --list-languages"
+  "Specifies the language of this back-end.
+For a comprehensive list of languages and voices available in espeak
+type in a terminal: espeak --list-languages"
   :tag "greader espeak language"
   :type 'string)
 
@@ -41,13 +46,13 @@ this variable determines authomatically if espeak is present in your PATH enviro
   :type 'string)
 
 (defcustom greader-espeak-punctuation nil
-  "espeak punctuation switch."
+  "Espeak punctuation switch."
   :tag "espeak punctuation"
   :type 'boolean)
 
 ;;; code
 (defun greader-espeak-set-rate (&optional rate)
-  "Return a string suitable for setting espeak rate."
+  "Return a string suitable for setting espeak RATE."
   (if (not rate)
       (concat "-s" (number-to-string greader-espeak-rate))
     (progn
@@ -55,7 +60,8 @@ this variable determines authomatically if espeak is present in your PATH enviro
       (concat "-s" (number-to-string rate)))))
 
 (defun greader-espeak-set-language (&optional lang)
-  "Return the appropriate string to pass to espeak in order to set the language appropriately"
+  "Return a suitable string for espeak language.
+LANG must be recognized by espeak or espeak-ng."
   (if (not lang)
       (concat "-v" greader-espeak-language)
     (progn
@@ -64,7 +70,8 @@ this variable determines authomatically if espeak is present in your PATH enviro
 
 ;;;###autoload
 (defun greader-espeak (command &optional arg &rest _)
-  "back-end main function of greader-espeak."
+  "Back-end main function of greader-espeak.
+COMMAND must be a string suitable for `make-process'."
   (pcase command
     ('executable
      greader-espeak-executable-name)

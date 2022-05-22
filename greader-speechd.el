@@ -15,12 +15,16 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
+;;; Commentary:
+;; 
+
 ;;; Code:
 
 ;;; customization variables
 (defgroup greader-speechd
   nil
-  "speech-dispatcher back-end for greader"
+  "Speech-dispatcher back-end for greader."
   :group 'greader)
 
 (defcustom greader-speechd-executable "spd-say"
@@ -48,13 +52,16 @@ none, some, or all."
 
 ;;; code
 (defun greader-speechd--find-executable ()
-  "tries to find speech-dispatcher client using greader-speechd-executable as basename."
+  "Try to find speech-dispatcher client.
+using `greader-speechd-executable' as basename."
   (locate-file greader-speechd-executable exec-path))
 
 (defun greader-speechd-set-language
     (&optional lang)
-  "sets language 'lang' for speech-dispatcher client.
-if lang is omitted, it looks in variable greader-speechd-language and retrieves the appropriate string used by spd-say or another client compatible."
+  "Set language 'lang' for speech-dispatcher client.
+if lang is omitted, it looks in variable greader-speechd-language and
+retrieves the appropriate string used by spd-say or another client
+compatible."
   (if (not lang)
       (concat "-l" greader-speechd-language)
     (progn
@@ -63,8 +70,9 @@ if lang is omitted, it looks in variable greader-speechd-language and retrieves 
 
 (defun greader-speechd-set-rate
     (&optional rate)
-  "returns parameter suitable for spd-say to set speech rate.
-for further documentation, see the documentation for greader-speechd-rate variable."
+  "Return parameter suitable for spd-say to set speech rate.
+for further documentation, see the documentation for
+greader-speechd-rate variable."
   (if (not rate)
       (concat "-r " (number-to-string greader-speechd-rate))
     (progn
@@ -72,8 +80,9 @@ for further documentation, see the documentation for greader-speechd-rate variab
       (concat "-r " (number-to-string rate)))))
 
 (defun greader-speechd-set-punctuation (&optional punct)
-  "returns a suitable parameter to pass to spd-say for setting punctuation leve.
-punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for all punctuation."
+  "Return a suitable parameter to pass to spd-say for setting punctuation level.
+punct must be a numeric value, 0 for no punctuation, 1 for some and 2
+or >2 for all punctuation."
   (catch 'return
     (cond
      ((booleanp punct)
@@ -97,7 +106,7 @@ punct must be a numeric value, 0 for no punctuation, 1 for some and 2 or >2 for 
 	    (throw 'return (concat "-mall"))))))))
 
 (defun greader-speechd-stop ()
-  "stops speech-dispatcher client."
+  "Stops speech-dispatcher client."
   (start-process "speechd-client" nil greader-speechd-executable "-S")
   (sleep-for 0 100))
 ;;;###autoload
