@@ -432,11 +432,17 @@ Optional argument PROMPT variable not used."
       t
       nil)))
 
-(defun greader-read-dissociated ()
+(defun greader-read-dissociated (&optional arg)
   "Use `dissociated-press to read a text dissociately.
 \(Helpful for
-mindfullness!)."
-  (interactive)
+mindfullness!). If ARG is nil, it will be chosen randomly (from 1 to
+10) to pass to `dissociated-press'. You can specify which contiguity
+you want by calling this function with a prefix."
+  (interactive "P")
+  (if (not arg)
+      (progn
+	(while (or (equal arg 0) (not arg))
+	  (setq arg (random 10)))))
   (setq greader-orig-buffer (current-buffer))
   (setq greader-dissoc-buffer (get-buffer-create "*Dissociation*"))
   (unwind-protect
@@ -444,13 +450,9 @@ mindfullness!)."
 	(fset 'greader-temp-function (symbol-function 'y-or-n-p))
 	(fset 'y-or-n-p (symbol-function
 			 'greader-response-for-dissociate))
-	(let ((arg (random 10)))
-	  (while (equal arg 0)
-	    (setq arg (random 10)))
-	  (dissociated-press arg))
+	(dissociated-press arg)
 	(switch-to-buffer greader-dissoc-buffer)
 	(goto-char (point-min))
-
 	(greader-mode 1)
 	(greader-read))
     (fset 'y-or-n-p (symbol-function 'greader-temp-function))))
