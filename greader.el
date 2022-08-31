@@ -181,37 +181,51 @@ if set to t, when you call function `greader-read', that function sets a
   is set at register position then reading starts from there."
   :type 'boolean
   :tag "use register")
-(defvar greader-prefix-map (make-sparse-keymap))
-(defvar greader-map (make-sparse-keymap))
-(defvar greader-reading-map (make-sparse-keymap))
 
-(define-key greader-map (kbd "C-r s") 'greader-toggle-tired-mode)
-(define-key greader-prefix-map (kbd "C-r") greader-map)
-(define-key greader-map (kbd "C-r r") 'isearch-backward)
-(define-key greader-map (kbd "C-r SPC") 'greader-read)
-(define-key greader-reading-map (kbd "SPC") 'greader-stop)
-(define-key greader-map (kbd "C-r l") 'greader-set-language)
-(define-key greader-reading-map (kbd "p") 'greader-toggle-punctuation)
-(define-key greader-reading-map (kbd ".") 'greader-stop-with-timer)
-(define-key greader-map (kbd "C-r t") 'greader-toggle-timer)
-(define-key greader-reading-map (kbd "+") 'greader-inc-rate)
-(define-key greader-reading-map (kbd "-") 'greader-dec-rate)
-(define-key greader-map (kbd "C-r f") 'greader-get-attributes)
-(define-key greader-map (kbd "C-r b") 'greader-change-backend)
+(define-obsolete-variable-alias 'greader-map 'greader-mode-map "2022")
+(defvar greader-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-r s")   #'greader-toggle-tired-mode)
+    (define-key map (kbd "C-r r")   #'isearch-backward)
+    (define-key map (kbd "C-r SPC") #'greader-read)
+    (define-key map (kbd "C-r l")   #'greader-set-language)
+    (define-key map (kbd "C-r t")   #'greader-toggle-timer)
+    (define-key map (kbd "C-r f")   #'greader-get-attributes)
+    (define-key map (kbd "C-r b")   #'greader-change-backend)
+    map))
+
+(defvar greader-prefix-map
+  ;; FIXME: This var/keymap seems to be unused.
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-r") greader-mode-map)
+    map))
+
+(defvar greader-reading-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "SPC") #'greader-stop)
+    (define-key map (kbd "p")   #'greader-toggle-punctuation)
+    (define-key map (kbd ".")   #'greader-stop-with-timer)
+    (define-key map (kbd "+")   #'greader-inc-rate)
+    (define-key map (kbd "-")   #'greader-dec-rate)
+    map))
+
+(defvar-local greader--reading nil
+  "If non-nil, `greader-reading-map' is active.")
 
 					;###autoload
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
-  :keymap greader-map
-  :group greader
-  (if greader-mode
-      (if greader-auto-tired-mode
-	  (greader-auto-tired-mode-setup))
-    (if greader-auto-tired-timer
-	(progn
-	  (cancel-timer greader-auto-tired-timer)
-	  (greader-toggle-timer))))
+  :group 'greader
+  (cond
+   (greader-mode
+    (add-to-list 'minor-mode-map-alist
+                 `'(greader--reading . ,greader-reading-map))
+    (if greader-auto-tired-mode
+	(greader-auto-tired-mode-setup)))
+   (greader-auto-tired-timer
+    (cancel-timer greader-auto-tired-timer)
+    (greader-toggle-timer)))
   (greader-load-backends))
 ;;;code
 (defun greader-set-register ()
@@ -281,7 +295,7 @@ backends."
 
 (defun greader-load-backends ()
   "Load backends taken from `greader-backends'."
-  (mapcar 'require greader-backends))
+  (mapcar #'require greader-backends))
 
 (defun greader-read-asynchronous (txt)
   "Read the text given in TXT."
@@ -328,7 +342,7 @@ backends."
 
 (defun greader-tts-stop ()
 "Stop reading of current buffer."
-  (set-process-sentinel greader-synth-process 'greader--default-action)
+  (set-process-sentinel greader-synth-process #'greader--default-action)
   (if
       (not
        (eq
@@ -459,17 +473,11 @@ you want by calling this function with a prefix."
 
 (defun greader-set-reading-keymap ()
   "Set greader's keymap when reading."
-  (if (assoc 'greader-mode minor-mode-map-alist)
-      (progn
-	(setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
-	(setq minor-mode-map-alist (push `(greader-mode . ,greader-reading-map) minor-mode-map-alist)))))
+  (setq greader--reading t))
 
 (defun greader-set-greader-keymap ()
   "Set greader's keymap when not reading."
-  (if (assoc 'greader-mode minor-mode-map-alist)
-      (progn
-	(setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
-	(setq minor-mode-map-alist (push `(greader-mode . ,greader-map) minor-mode-map-alist)))))
+  (setq greader--reading nil))
 
 (defun greader-stop ()
   "Stops reading of document."
@@ -582,10 +590,10 @@ Optional argument STRING contains the string passed to
 
 (defun greader-set-language (lang)
   "Set language of tts.
-LANG must be in ISO code, for example 'en' for english or 'fr' for
+LANG must be in ISO code, for example `en' for english or `fr' for
 french.  This function set the language of tts local for current
-buffer, so if you want to set it globally, please use 'm-x
-`customize-option' <RET> greader-language <RET>'."
+buffer, so if you want to set it globally, please use
+    M-x customize-option RET greader-language RET"
   (interactive "sset language to:")
   (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
@@ -660,8 +668,12 @@ Optional argument TIMER-IN-MINS timer in minutes (integer)."
   (catch 'timer-is-nil
     (cond
      ((greader-timer-flag-p)
-      (setq-local greader-stop-timer (run-at-time (- (greader-convert-mins-to-secs greader-timer) greader-elapsed-time) nil 'greader-stop-timer-callback))
-      (setq-local greader-elapsed-timer (run-at-time 1 1 'greader-elapsed-time)))
+      (setq-local greader-stop-timer
+                  (run-at-time (- (greader-convert-mins-to-secs greader-timer)
+                                  greader-elapsed-time)
+                               nil #'greader-stop-timer-callback))
+      (setq-local greader-elapsed-timer
+                  (run-at-time 1 1 #'greader-elapsed-time)))
      ((not (greader-timer-flag-p))
       (throw 'timer-is-nil nil))))
   t)
@@ -754,13 +766,15 @@ Enabling tired mode implicitly enables timer also."
       (message "tired mode disabled in current buffer"))))
 
 (defun greader-setup-tired-timer ()
+  ;; FIXME: You can use "--" in the function name to indicate an
+  ;; internal function.
   "Not documented, internal use."
   (if greader-tired-flag
       (run-with-idle-timer
        (time-add
 	(current-idle-time)
-	(seconds-to-time
-	 greader-tired-time)) nil 'greader-tired-mode-callback)))
+	(seconds-to-time greader-tired-time))
+       nil #'greader-tired-mode-callback)))
 
 (defun greader-tired-mode-callback ()
 "Not documented, internal use."
@@ -777,7 +791,8 @@ Enabling tired mode implicitly enables timer also."
       (progn
 	(if (not greader-tired-flag)
 	    (greader-toggle-tired-mode))
-	(setq-local greader-auto-tired-timer(run-at-time nil 1 'greader-auto-tired-callback)))
+	(setq-local greader-auto-tired-timer
+	            (run-at-time nil 1 #'greader-auto-tired-callback)))
     (progn
       (if greader-tired-flag
 	  (greader-toggle-tired-mode))
@@ -808,12 +823,16 @@ In this mode, greader will enter in tired mode at a customizable time
 
 (defun greader-convert-time (time)
   "Not documented, internal use."
-  (let ((current-t (decode-time))
-	(i (nth 2 (decode-time)))
-	(counter (nth 2 (decode-time))))
+  ;; FIXME: Should we try to make this function work with non-integer
+  ;; value of `time'?
+  (let* ((current-t (decode-time))
+	 (i (nth 2 current-t))          ;Current hour.
+	 (counter i))
     (if (stringp time)
 	(setq time (string-to-number time)))
     (catch 'done
+      ;; FIXME: This will inf-loop if `time' > 23!
+      ;; FIXME: Can't this loop be replaced with (+ i (mod (- time i) 24))?
       (while t
 	(if (= i time)
 	    (throw 'done nil))
@@ -821,10 +840,10 @@ In this mode, greader will enter in tired mode at a customizable time
 	(cl-incf counter)
 	(if (= i 24)
 	    (setq i 0))))
-    (setcar (cdr (cdr current-t)) counter)
-    (setcar current-t 0)
-    (setcar (cdr current-t) 0)
-    (apply 'encode-time current-t)))
+    (setf (nth 2 current-t) counter)
+    (setf (nth 0 current-t) 0)
+    (setf (nth 1 current-t) 0)
+    (apply #'encode-time current-t)))
 
 (defun greader-current-time-in-interval-p (time1 time2)
   "Not documented, internal use."
@@ -859,7 +878,7 @@ In this mode, greader will enter in tired mode at a customizable time
 
 (defun greader-set-rate (n)
   "Set rate in current buffer to tthe specified value in N.
-rate is expressed in words per minute.  For maximum value, see 'man espeak'."
+rate is expressed in words per minute.  For maximum value, see `man espeak'."
   (greader-call-backend 'rate n))
 
 
@@ -887,17 +906,19 @@ If prefix, it will be used to decrement  rate."
   "Return t if STR has lines iphenated."
   (let
       ((i 0)
-       (j 0))
+       ;; (j 0)
+       )
     (catch 'done
       (while (< i (length str))
 	(if (and (member (string (aref str i)) greader-hyphenation-symbol)
 		 (member (string (aref str (1+ i))) greader-hyphenation-newlines))
 	    (progn
-	      (setq j 1)
+	      ;; (setq j 1)
 	      (throw 'done t)))
 	(cl-incf i))
-      (if (= j 0)
-	  nil))))
+      ;; (if (= j 0)
+      nil ;;)
+      )))
 
 (defun greader-dehyphenate (str)
   "Dehyphenate STR.
