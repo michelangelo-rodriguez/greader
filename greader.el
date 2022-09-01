@@ -765,10 +765,7 @@ Enabling tired mode implicitly enables timer also."
       (greader-toggle-tired-flag)
       (message "tired mode disabled in current buffer"))))
 
-(defun greader-setup-tired-timer ()
-  ;; FIXME: You can use "--" in the function name to indicate an
-  ;; internal function.
-  "Not documented, internal use."
+(defun greader--setup-tired-timer ()
   (if greader-tired-flag
       (run-with-idle-timer
        (time-add
@@ -776,8 +773,7 @@ Enabling tired mode implicitly enables timer also."
 	(seconds-to-time greader-tired-time))
        nil #'greader-tired-mode-callback)))
 
-(defun greader-tired-mode-callback ()
-"Not documented, internal use."
+(defun greader--tired-mode-callback ()
   (if (equal last-command 'greader-read)
       (greader-move-to-last-point)))
 
