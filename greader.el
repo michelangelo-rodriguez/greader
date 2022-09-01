@@ -295,7 +295,7 @@ backends."
 
 (defun greader-load-backends ()
   "Load backends taken from `greader-backends'."
-  (mapcar 'require greader-backends))
+  (mapcar #'require greader-backends))
 
 (defun greader-read-asynchronous (txt)
   "Read the text given in TXT."
@@ -342,7 +342,7 @@ backends."
 
 (defun greader-tts-stop ()
 "Stop reading of current buffer."
-  (set-process-sentinel greader-synth-process 'greader--default-action)
+  (set-process-sentinel greader-synth-process #'greader--default-action)
   (if
       (not
        (eq
@@ -594,10 +594,10 @@ Optional argument STRING contains the string passed to
 
 (defun greader-set-language (lang)
   "Set language of tts.
-LANG must be in ISO code, for example 'en' for english or 'fr' for
+LANG must be in ISO code, for example `en' for english or `fr' for
 french.  This function set the language of tts local for current
-buffer, so if you want to set it globally, please use 'm-x
-`customize-option' <RET> greader-language <RET>'."
+buffer, so if you want to set it globally, please use
+    M-x customize-option RET greader-language RET"
   (interactive "sset language to:")
   (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
@@ -672,8 +672,12 @@ Optional argument TIMER-IN-MINS timer in minutes (integer)."
   (catch 'timer-is-nil
     (cond
      ((greader-timer-flag-p)
-      (setq-local greader-stop-timer (run-at-time (- (greader-convert-mins-to-secs greader-timer) greader-elapsed-time) nil 'greader-stop-timer-callback))
-      (setq-local greader-elapsed-timer (run-at-time 1 1 'greader-elapsed-time)))
+      (setq-local greader-stop-timer
+                  (run-at-time (- (greader-convert-mins-to-secs greader-timer)
+                                  greader-elapsed-time)
+                               nil #'greader-stop-timer-callback))
+      (setq-local greader-elapsed-timer
+                  (run-at-time 1 1 #'greader-elapsed-time)))
      ((not (greader-timer-flag-p))
       (throw 'timer-is-nil nil))))
   t)
@@ -765,17 +769,15 @@ Enabling tired mode implicitly enables timer also."
       (greader-toggle-tired-flag)
       (message "tired mode disabled in current buffer"))))
 
-(defun greader-setup-tired-timer ()
-  "Not documented, internal use."
+(defun greader--setup-tired-timer ()
   (if greader-tired-flag
       (run-with-idle-timer
        (time-add
 	(current-idle-time)
-	(seconds-to-time
-	 greader-tired-time)) nil 'greader-tired-mode-callback)))
+	(seconds-to-time greader-tired-time))
+       nil #'greader-tired-mode-callback)))
 
-(defun greader-tired-mode-callback ()
-"Not documented, internal use."
+(defun greader--tired-mode-callback ()
   (if (equal last-command 'greader-read)
       (greader-move-to-last-point)))
 
@@ -789,7 +791,8 @@ Enabling tired mode implicitly enables timer also."
       (progn
 	(if (not greader-tired-flag)
 	    (greader-toggle-tired-mode))
-	(setq-local greader-auto-tired-timer(run-at-time nil 1 'greader-auto-tired-callback)))
+	(setq-local greader-auto-tired-timer
+	            (run-at-time nil 1 #'greader-auto-tired-callback)))
     (progn
       (if greader-tired-flag
 	  (greader-toggle-tired-mode))
