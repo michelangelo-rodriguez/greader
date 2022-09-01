@@ -181,37 +181,51 @@ if set to t, when you call function `greader-read', that function sets a
   is set at register position then reading starts from there."
   :type 'boolean
   :tag "use register")
-(defvar greader-prefix-map (make-sparse-keymap))
-(defvar greader-map (make-sparse-keymap))
-(defvar greader-reading-map (make-sparse-keymap))
 
-(define-key greader-map (kbd "C-r s") 'greader-toggle-tired-mode)
-(define-key greader-prefix-map (kbd "C-r") greader-map)
-(define-key greader-map (kbd "C-r r") 'isearch-backward)
-(define-key greader-map (kbd "C-r SPC") 'greader-read)
-(define-key greader-reading-map (kbd "SPC") 'greader-stop)
-(define-key greader-map (kbd "C-r l") 'greader-set-language)
-(define-key greader-reading-map (kbd "p") 'greader-toggle-punctuation)
-(define-key greader-reading-map (kbd ".") 'greader-stop-with-timer)
-(define-key greader-map (kbd "C-r t") 'greader-toggle-timer)
-(define-key greader-reading-map (kbd "+") 'greader-inc-rate)
-(define-key greader-reading-map (kbd "-") 'greader-dec-rate)
-(define-key greader-map (kbd "C-r f") 'greader-get-attributes)
-(define-key greader-map (kbd "C-r b") 'greader-change-backend)
+(define-obsolete-variable-alias 'greader-map 'greader-mode-map "2022")
+(defvar greader-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-r s")   #'greader-toggle-tired-mode)
+    (define-key map (kbd "C-r r")   #'isearch-backward)
+    (define-key map (kbd "C-r SPC") #'greader-read)
+    (define-key map (kbd "C-r l")   #'greader-set-language)
+    (define-key map (kbd "C-r t")   #'greader-toggle-timer)
+    (define-key map (kbd "C-r f")   #'greader-get-attributes)
+    (define-key map (kbd "C-r b")   #'greader-change-backend)
+    map))
+
+(defvar greader-prefix-map
+  ;; FIXME: This var/keymap seems to be unused.
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-r") greader-mode-map)
+    map))
+
+(defvar greader-reading-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "SPC") #'greader-stop)
+    (define-key map (kbd "p")   #'greader-toggle-punctuation)
+    (define-key map (kbd ".")   #'greader-stop-with-timer)
+    (define-key map (kbd "+")   #'greader-inc-rate)
+    (define-key map (kbd "-")   #'greader-dec-rate)
+    map))
+
+(defvar-local greader--reading nil
+  "If non-nil, `greader-reading-map' is active.")
 
 					;###autoload
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
-  :keymap greader-map
-  :group greader
-  (if greader-mode
-      (if greader-auto-tired-mode
-	  (greader-auto-tired-mode-setup))
-    (if greader-auto-tired-timer
-	(progn
-	  (cancel-timer greader-auto-tired-timer)
-	  (greader-toggle-timer))))
+  :group 'greader
+  (cond
+   (greader-mode
+    (add-to-list 'minor-mode-map-alist
+                 `'(greader--reading . ,greader-reading-map))
+    (if greader-auto-tired-mode
+	(greader-auto-tired-mode-setup)))
+   (greader-auto-tired-timer
+    (cancel-timer greader-auto-tired-timer)
+    (greader-toggle-timer)))
   (greader-load-backends))
 ;;;code
 (defun greader-set-register ()
