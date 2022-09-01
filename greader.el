@@ -836,10 +836,10 @@ In this mode, greader will enter in tired mode at a customizable time
 	(cl-incf counter)
 	(if (= i 24)
 	    (setq i 0))))
-    (setcar (cdr (cdr current-t)) counter)
-    (setcar current-t 0)
-    (setcar (cdr current-t) 0)
-    (apply 'encode-time current-t)))
+    (setf (nth 2 current-t) counter)
+    (setf (nth 0 current-t) 0)
+    (setf (nth 1 current-t) 0)
+    (apply #'encode-time current-t)))
 
 (defun greader-current-time-in-interval-p (time1 time2)
   "Not documented, internal use."
@@ -874,7 +874,7 @@ In this mode, greader will enter in tired mode at a customizable time
 
 (defun greader-set-rate (n)
   "Set rate in current buffer to tthe specified value in N.
-rate is expressed in words per minute.  For maximum value, see 'man espeak'."
+rate is expressed in words per minute.  For maximum value, see `man espeak'."
   (greader-call-backend 'rate n))
 
 
@@ -902,17 +902,19 @@ If prefix, it will be used to decrement  rate."
   "Return t if STR has lines iphenated."
   (let
       ((i 0)
-       (j 0))
+       ;; (j 0)
+       )
     (catch 'done
       (while (< i (length str))
 	(if (and (member (string (aref str i)) greader-hyphenation-symbol)
 		 (member (string (aref str (1+ i))) greader-hyphenation-newlines))
 	    (progn
-	      (setq j 1)
+	      ;; (setq j 1)
 	      (throw 'done t)))
 	(cl-incf i))
-      (if (= j 0)
-	  nil))))
+      ;; (if (= j 0)
+      nil ;;)
+      )))
 
 (defun greader-dehyphenate (str)
   "Dehyphenate STR.
