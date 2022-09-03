@@ -471,17 +471,11 @@ mindfullness!)."
 
 (defun greader-set-reading-keymap ()
   "Set greader's keymap when reading."
-  (if (assoc 'greader-mode minor-mode-map-alist)
-      (progn
-	(setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
-	(setq minor-mode-map-alist (push `(greader-mode . ,greader-reading-map) minor-mode-map-alist)))))
+  (setq greader--reading t))
 
 (defun greader-set-greader-keymap ()
   "Set greader's keymap when not reading."
-  (if (assoc 'greader-mode minor-mode-map-alist)
-      (progn
-	(setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
-	(setq minor-mode-map-alist (push `(greader-mode . ,greader-map) minor-mode-map-alist)))))
+  (setq greader--reading nil))
 
 (defun greader-stop ()
   "Stops reading of document."
