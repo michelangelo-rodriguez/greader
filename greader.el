@@ -221,11 +221,6 @@ if set to t, when you call function `greader-read', that function sets a
    (greader-mode
     (add-to-list 'minor-mode-map-alist
                  `'(greader--reading . ,greader-reading-map))
-    (if greader-auto-tired-mode
-	(greader-auto-tired-mode-setup)))
-   (greader-auto-tired-timer
-    (cancel-timer greader-auto-tired-timer)
-    (greader-toggle-timer)))
   (greader-load-backends))
 ;;;code
 (defun greader-set-register ()
