@@ -212,7 +212,7 @@ if set to t, when you call function `greader-read', that function sets a
   (cond
    (greader-mode
     (add-to-list 'minor-mode-map-alist
-                 `'(greader--reading . ,greader-reading-map))
+                 `(greader--reading . ,greader-reading-map))
     (greader-load-backends))))
 
 ;;;code
