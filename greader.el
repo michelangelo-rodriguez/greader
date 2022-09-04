@@ -195,11 +195,11 @@ if set to t, when you call function `greader-read', that function sets a
     map))
 (defvar greader-reading-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "SPC") #'greader-stop)
-    (define-key map (kbd "p")   #'greader-toggle-punctuation)
-    (define-key map (kbd ".")   #'greader-stop-with-timer)
-    (define-key map (kbd "+")   #'greader-inc-rate)
-    (define-key map (kbd "-")   #'greader-dec-rate)
+    (define-key map (kbd "C-r SPC") #'greader-stop)
+    (define-key map (kbd "C-r p")   #'greader-toggle-punctuation)
+    (define-key map (kbd "C-r .")   #'greader-stop-with-timer)
+    (define-key map (kbd "c-r +")   #'greader-inc-rate)
+    (define-key map (kbd "c-r -")   #'greader-dec-rate)
     map))
 (defvar-local greader--reading nil
   "If non-nil, `greader-reading-map' is active.")
@@ -210,14 +210,11 @@ if set to t, when you call function `greader-read', that function sets a
   :lighter " greader"
   :group 'greader
   (cond
-   ;;; why we eval a call to a function?
-   ;;; I suppose because side-effect of enabling the mode.
-;;;   So we do wrong if evaluate greader-mode as a variable?
-   
    (greader-mode
     (add-to-list 'minor-mode-map-alist
                  `'(greader--reading . ,greader-reading-map))
-  (greader-load-backends))))
+    (greader-load-backends))))
+
 ;;;code
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
