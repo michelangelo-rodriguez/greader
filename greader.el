@@ -55,7 +55,7 @@
 (defvar greader-elapsed-time 0)
 (defvar greader-timer-flag nil)
 (defvar greader-tired-flag nil)
-(defvar greader-filter-enabled t)
+(defvar greader-filter-enabled nil)
 (defvar point-limit nil)
 (defvar greader-differs nil)
 (defvar greader-not-start-of-sentence '(" " "\n" "\t"))
