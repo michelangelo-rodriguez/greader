@@ -523,34 +523,17 @@ which search for."
     (funcall point-limit)))
 
 (defun greader-forward-sentence ()
-  "Bring point at start of next sentence to read."
-  (goto-char (greader-next-sentence)))
+  (forward-sentence))
 
-(defun greader-get-sentence (&optional direction)
-  "Get next sentence to read.
-Optional argument DIRECTION is actually not used."
-  (if (not direction)
-      (setq direction 1))
-  (if (< direction 0)
-      (progn
-	(setq direction '-)
-	(setq point-limit 'point-min)
-	(setq greader-differs '>))
-    (progn
-      (setq direction '+)
-      (setq point-limit 'point-max)
-      (setq greader-differs '<)))
-
-  (let (sentence)
-    (catch 'afterloop
-      (save-excursion
-	(while (funcall greader-differs (point) (funcall point-limit))
-	  (setq sentence (concat sentence (string (following-char))))
-	  (cond
-	   ((greader-end-sentence-p)
-	    (throw 'afterloop sentence)))
-	  (goto-char (funcall direction (point) 1)))
-	sentence))))
+(defun greader-get-sentence ()
+  (let ((sentence-start (make-marker)))
+    (setq sentence-start (point))
+    (save-excursion
+      (when (not (eobp))
+	(forward-sentence))
+      (if (> (point) sentence-start)
+	  (buffer-substring-no-properties sentence-start (point))
+	nil))))
 
 (defun greader-sentence-at-point ()
   "Get sentence starting from point."
