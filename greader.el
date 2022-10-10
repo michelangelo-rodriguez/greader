@@ -72,6 +72,10 @@
   nil
   "Greader customization."
   :group 'convenience)
+(defcustom greader-hyphen-regex "-[[:cntrl:]]+[[:blank:]]*"
+  "Regex to use when dehyphenation is needed."
+  :type 'string
+  :tag "greader hyphen regex")
 
 (defcustom
   greader-backends
@@ -865,7 +869,7 @@ If prefix, it will be used to decrement  rate."
   (greader-read))
 
 (defun greader-sentence-needs-dehyphenation (str)
-  (if (string-match "-[[:cntrl:]]+[[:blank:]]*" str)
+  (if (string-match greader-hyphen-regex str)
       t
     nil))
 
