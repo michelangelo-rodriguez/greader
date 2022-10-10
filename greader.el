@@ -882,20 +882,9 @@ If prefix, it will be used to decrement  rate."
   (greader-read))
 
 (defun greader-sentence-needs-dehyphenation (str)
-  "Return t if STR has lines iphenated."
-  (let
-      ((i 0)
-       (j 0))
-    (catch 'done
-      (while (< i (length str))
-	(if (and (member (string (aref str i)) greader-hyphenation-symbol)
-		 (member (string (aref str (1+ i))) greader-hyphenation-newlines))
-	    (progn
-	      (setq j 1)
-	      (throw 'done t)))
-	(cl-incf i))
-      (if (= j 0)
-	  nil))))
+  (if (string-match "-[[:blank:]]+" str)
+      t
+    nil))
 
 (defun greader-dehyphenate (str)
   "Dehyphenate STR.
