@@ -882,7 +882,7 @@ If prefix, it will be used to decrement  rate."
   (greader-read))
 
 (defun greader-sentence-needs-dehyphenation (str)
-  (if (string-match "-[[:blank:]]+" str)
+  (if (string-match "-[[:cntrl:]]+[[:blank:]]*" str)
       t
     nil))
 
