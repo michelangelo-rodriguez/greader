@@ -159,24 +159,24 @@ customize your key definitions for greader, for example."
   :tag "greader-mode hook"
   :type 'hook)
 
-(defcustom greader-move-to-next-chung
-  'greader-forward-sentence
-  "Sets the function that moves the cursor for the next chung of text.
+(defcustom greader-move-to-next-chunk   
+  #'greader-forward-sentence
+  "The function that moves the cursor for the next chunk of text.
 For example if you have specified `sentence-at-point' function to get
-the actual chung, you should specify `forward-sentence' for this
+the current chunk, you should specify `forward-sentence' for this
 variable."
-  :tag "greader move to next chung function"
+  :tag "greader move to next chunk function"
   :type 'function)
 
-(defcustom greader-read-chung-of-text
-  'greader-sentence-at-point
-  "Sets the function used to get the portion of text to read.
-The variable `greader-move-to-next-chung' must be set to a function that
+(defcustom greader-read-chunk-of-text
+  #'greader-sentence-at-point
+  "The function used to get the portion of text to read.
+The variable `greader-move-to-next-chunk' must be set to a function that
 moves the cursor to the same amount of text that is set in this
 variable.  For example, if you specify a function that gets a
 sentence, you should specify a function that moves to the next one."
   :type 'function
-  :tag "greader get chung of text function")
+  :tag "greader get chunk of text function")
 (defcustom greader-use-prefix t
   "Toggle on or off for use register feature.
 if set to t, when you call function `greader-read', that function sets a
@@ -389,8 +389,8 @@ Argument PROCESS .
 Argument EVENT ."
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
-  (funcall greader-move-to-next-chung)
-  (funcall 'greader-read))
+  (funcall greader-move-to-next-chunk)
+  (greader-read))
 
 (defun greader-read (&optional goto-marker)
   "Start reading of current buffer.
@@ -409,18 +409,18 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
   (cond
    ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
     (greader-setup-timers)))
-  (let ((chung (funcall greader-read-chung-of-text)))
-    (if chung
+  (let ((chunk (funcall greader-read-chunk-of-text)))
+    (if chunk
 	(progn
-					; this extra verification is necessary because espeak has a bug that,
-					; when we pass a string containing a vocal plus only 2 .. it reads
-					; garbage.
-	  (if (string-suffix-p ".." chung)
-	      (setq chung (concat chung ".")))
+	  ;; This extra verification is necessary because espeak has a bug that,
+	  ;; when we pass a string containing a vocal plus only 2 .. it reads
+	  ;; garbage.
+	  (if (string-suffix-p ".." chunk)
+	      (setq chunk (concat chunk ".")))
 	  (greader-set-reading-keymap)
-	  (setq-local greader-read 'greader-read)
-	  (setq-local greader-backend-action 'greader-next-action)
-	  (greader-read-asynchronous chung))
+	  (setq-local greader-read 'greader-read) ;FIXME: Unused?
+	  (setq-local greader-backend-action #'greader-next-action)
+	  (greader-read-asynchronous chunk))
       (progn
 	(setq-local greader-backend-action 'greader--default-action)
 	(greader-set-greader-keymap)
