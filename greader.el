@@ -84,8 +84,8 @@
   :tag "greader back-ends"
   :type '(repeat function))
 (defcustom
-  greader-current-backend
-  #'greader-espeak
+  greader-actual-backend
+  'greader-espeak
   "Greader back-end to use."
   :tag "greader actual back-end"
   :type
@@ -240,8 +240,8 @@ if set to t, when you call function `greader-read', that function sets a
 \(internal use!\)."
 
   (if arg
-      (funcall greader-current-backend command arg)
-    (funcall greader-current-backend command)))
+      (funcall greader-actual-backend command arg)
+    (funcall greader-actual-backend command)))
 (defvar
   greader-backend-filename
   (greader-call-backend 'executable))
@@ -249,7 +249,6 @@ if set to t, when you call function `greader-read', that function sets a
 (defvar greader-orig-buffer nil)
 (defvar greader-dissoc-buffer "*Dissociation*")
 (defvar greader-temp-function nil)
-
 (defun greader-change-backend (&optional backend)
   "Change BACKEND used for actually read the buffer.
 If backend is
@@ -261,7 +260,7 @@ backends."
 	(completing-read"back-end:" (greader--get-backends)))))
   (if (functionp backend)
       (if (memq backend greader-backends)
-	  (setq-local greader-current-backend backend)
+	  (setq-local greader-actual-backend backend)
 	(error "%s" "The function you have specified is not a greader's back-end.")))
   (if (stringp backend)
       (progn
@@ -272,19 +271,17 @@ backends."
 		 (get elem 'greader-backend-name) backend)
 		(setq result elem)))
 	  (if result
-	      (setq-local greader-current-backend result)
+	      (setq-local greader-actual-backend result)
 	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
   (if (not backend)
       (let
-	  ((index (seq-position greader-backends greader-current-backend))
+	  ((index (seq-position greader-backends greader-actual-backend))
 	   (len (length greader-backends)))
-	;; FIXME: BTW, instead of messing with positions, you can do
-        ;; (car (or (cdr (memq greader-current-backend greader-backends))
-        ;;          greader-backends))
-	(setq-local greader-current-backend
-	            (elt greader-backends
-	                 ;; FIXME: a.k.a (mod (+ index 1) len).
-  (message "Current back-end is %s." (get greader-current-backend 'greader-backend-name)))
+	(if
+	    (= (+ index 1) len)
+	    (setq-local greader-actual-backend (elt greader-backends 0))
+	  (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
+  (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
 
 (defun greader-load-backends ()
   "Load backends taken from `greader-backends'."
