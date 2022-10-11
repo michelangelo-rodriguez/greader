@@ -72,7 +72,7 @@
   nil
   "Greader customization."
   :group 'convenience)
-(defcustom greader-hyphen-regex "-[[:cntrl:]]+[[:blank:]]*"
+(defcustom greader-hyphen-regex "[-‐]\n+[[:blank:]]*"
   "Regex to use when dehyphenation is needed."
   :type 'string
   :tag "greader hyphen regex")
