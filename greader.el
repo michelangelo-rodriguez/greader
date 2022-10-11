@@ -206,15 +206,11 @@ if set to t, when you call function `greader-read', that function sets a
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
-  :keymap greader-map
-  :group greader
-  (if greader-mode
-      (if greader-auto-tired-mode
-	  (greader-auto-tired-mode-setup))
-    (if greader-auto-tired-timer
-	(progn
-	  (cancel-timer greader-auto-tired-timer)
-	  (greader-toggle-timer))))
+  :group 'greader
+  (cond
+   (greader-mode
+    (add-to-list 'minor-mode-map-alist
+                 `'(greader--reading . ,greader-reading-map))
   (greader-load-backends))
 ;;;code
 (defun greader-set-register ()
