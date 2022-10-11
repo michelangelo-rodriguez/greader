@@ -873,28 +873,9 @@ If prefix, it will be used to decrement  rate."
       t
     nil))
 
-(defun greader-dehyphenate (str)
-  "Dehyphenate STR.
-new lines can be either in unix stile, or ms, or macosX."
-  (let
-      ((new-sentence "")
-       (i 0)
-       )
-    (while (< i (length str))
-      (catch 'done
-	(if
-	    (and
-	     (member (string (aref str i)) greader-hyphenation-symbol)
-	     (member (string (aref str (+ i 1))) greader-hyphenation-newlines))
-	    (progn
-	      (cl-incf i)
-	      (while (or (member (string (aref str i)) greader-hyphenation-newlines)
-			 (member (string (aref str i)) greader-spaces))
-		(cl-incf i))
-	      (throw 'done nil)))
-	(setq new-sentence (concat new-sentence (string (aref str i))))
-	(cl-incf i)))
-    new-sentence))
+(defun greader-dehyphenate (sentence)
+  (replace-regexp-in-string greader-hyphen-regex "" sentence))
+
 (defun greader-get-attributes ()
   "Print text properties associated with current char."
   (interactive)
