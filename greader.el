@@ -188,19 +188,27 @@ if set to t, when you call function `greader-read', that function sets a
 (defvar greader-map (make-sparse-keymap))
 (defvar greader-reading-map (make-sparse-keymap))
 
-(define-key greader-map (kbd "C-r s") 'greader-toggle-tired-mode)
-(define-key greader-prefix-map (kbd "C-r") greader-map)
-(define-key greader-map (kbd "C-r r") 'isearch-backward)
-(define-key greader-map (kbd "C-r SPC") 'greader-read)
-(define-key greader-reading-map (kbd "SPC") 'greader-stop)
-(define-key greader-map (kbd "C-r l") 'greader-set-language)
-(define-key greader-reading-map (kbd "p") 'greader-toggle-punctuation)
-(define-key greader-reading-map (kbd ".") 'greader-stop-with-timer)
-(define-key greader-map (kbd "C-r t") 'greader-toggle-timer)
-(define-key greader-reading-map (kbd "+") 'greader-inc-rate)
-(define-key greader-reading-map (kbd "-") 'greader-dec-rate)
-(define-key greader-map (kbd "C-r f") 'greader-get-attributes)
-(define-key greader-map (kbd "C-r b") 'greader-change-backend)
+(define-obsolete-variable-alias 'greader-map 'greader-mode-map "2022")
+(defvar greader-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-r s")   #'greader-toggle-tired-mode)
+    (define-key map (kbd "C-r r")   #'isearch-backward)
+    (define-key map (kbd "C-r SPC") #'greader-read)
+    (define-key map (kbd "C-r l")   #'greader-set-language)
+    (define-key map (kbd "C-r t")   #'greader-toggle-timer)
+    (define-key map (kbd "C-r f")   #'greader-get-attributes)
+    (define-key map (kbd "C-r b")   #'greader-change-backend)
+    map))
+(defvar greader-reading-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-r SPC") #'greader-stop)
+    (define-key map (kbd "C-r p")   #'greader-toggle-punctuation)
+    (define-key map (kbd "C-r .")   #'greader-stop-with-timer)
+    (define-key map (kbd "c-r +")   #'greader-inc-rate)
+    (define-key map (kbd "c-r -")   #'greader-dec-rate)
+    map))
+(defvar-local greader--reading nil
+  "If non-nil, `greader-reading-map' is active.")
 
 					;###autoload
 (define-minor-mode greader-mode
