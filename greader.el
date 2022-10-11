@@ -59,10 +59,9 @@
 (defvar point-limit nil)
 (defvar greader-differs nil)
 (defvar greader-not-start-of-sentence '(" " "\n" "\t"))
-(defvar greader-end-of-sentence '("." "?" "!" ":"))
 (defvar greader-debug-buffer "spd-output"
   "Contains the buffer name for debugging purposes.")
-(defvar greader-backend-action 'greader--default-action)
+(defvar greader-backend-action #'greader--default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
 (require 'seq)
