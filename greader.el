@@ -855,7 +855,167 @@ If prefix, it will be used to decrement  rate."
   "Print text properties associated with current char."
   (interactive)
   (print (text-properties-at (point))))
-(provide 'greader)
+
+(defcustom greader-compile-command "--compile="
+  "espeak-ng parameter to compile a lang."
+  :tag "greader compile command"
+  :type 'string)
+
+(defcustom greader-compile-extra-parameters nil
+  "Extra parameters to pass to espeak-ng.
+In general you should specify an alternative path for espeak voice
+  data."
+  :tag "greader compile extra parameters"
+  :type '(repeat :tag "extra parameter" string))
+
+					;###autoload
+
+(define-minor-mode greader-compile-mode
+  "Questo minor-mode globale di greader permette il salvataggio di un
+file dizionario di espeak-ng e la successiva compilazione della voce
+corrispondente in una sola operazione.
+In alcuni casi, la directory in cui espeak-ng conserva i dati relativi
+alle lingue non è scrivibile dall'utente normale, in questo caso, al
+salvataggio del file, verrà chiesto d'inserire la password di
+amministratore.
+Verrà chiesto anche se si vorrà salvare la password nel database
+auth-info.
+Per disabilitare quest'ultima domanda, configurare la variabile
+`greader-compile-ask-for-authinfo'
+Il valore predefinito è off, quindi la password di amministratore
+verrà chiesta sempre."
+  :global t
+
+  (if greader-compile-mode
+      (progn
+	(unless greader-compile-dictsource
+	  (error "Please set or customize `greader-compile-dictsource'
+    to define espeak-ng dictionary source location."))
+	(add-hook 'after-save-hook 'greader-check-visited-file)
+	(message "greader-compile minor mode enabled"))
+    (when (member 'greader-check-visited-file after-save-hook)
+      (message "greader-compile mode disabled")
+      (remove-hook 'after-save-hook 'greader-check-visited-file))))
+
+(defun greader-compile (&optional lang)
+
+  "La funzione greader-compile, se chiamata interattivamente, compila le
+definizioni di espeak-ng per una determinata lingua.
+In modo predefinito, greader-compile deduce la lingua dalle prime due
+lettere del file che si sta visitando.
+Se il suo parametro LANG è `non-nil', la funzione chiederà di
+specificare la lingua da compilare, ignorando il nome del file attuale
+ma proponendolo come default.
+In caso la lingua specificata non dovesse sembrare compatibile con
+l'ambiente del buffer, questa funzione chiederà conferma prima di
+procedere.
+Avviso importante: il parametro serve esclusivamente per una chiamata
+interattiva, dato che la funzione utilizza il minibuffer per ottenere
+la lingua.
+Se non viene chiamata interattivamente, non passarle argomenti, la
+funzione è progettata specificamente per essere eseguita da un hook."
+
+  (interactive "p")
+
+  (if lang
+      (progn
+
+	(setq lang (read-from-minibuffer "Language (2 letters):"
+					 nil
+					 nil
+					 nil
+					 nil
+					 nil
+					 (greader-compile-guess-lang))))
+
+    (setq lang (greader-compile-guess-lang))
+
+    (let (data-is-writable (command (append '("espeak") (list (concat greader-compile-command lang)) greader-compile-extra-parameters)))
+
+      (with-temp-buffer
+	(call-process "espeak" nil t t "--version")
+	(goto-char (point-min))
+	(search-forward "/")
+	(setq data-is-writable (file-writable-p (thing-at-point
+						 'filename))))
+
+      (if (not data-is-writable)
+	  (setq command (append '("sudo")command)))
+
+      (let ((espeak-process (make-process
+			     :name "greader-espeak"
+			     :filter 'greader-compile--filter
+			     :command command)))))))
+
+(defun greader-compile--filter (&optional process str)
+  (when (string-match "password" str)
+    (process-send-string process (concat (read-passwd str) "\n")))
+  (when (string-match "error" str)
+    (error "%s" str)))
+
+(defun greader-compile-guess-lang ()
+  (when (buffer-file-name)
+    (let*
+	((lang (buffer-file-name))
+
+	 (start (string-match "/[[:alpha:]][[:alpha:]]_" lang))
+
+	 end)
+      (if start
+	  (progn
+	    (setq start (1+ start))
+	    (setq end (string-match "_" lang start))
+	    (substring lang start end))
+	nil))))
+
+(defcustom greader-compile-dictsource nil
+  "Location of espeak dictionary source data.
+You must configure this variable in order to use
+  `greader-compile-mode'."
+  :tag "greader compile source dictionary directory"
+  :type '(repeat :tag "directory:" string))
+
+(defun greader-check-visited-file ()
+  (and
+   (member default-directory greader-compile-dictsource)
+   (greader-compile-guess-lang)
+   (greader-compile)))
+
+(defcustom greader-compile-default-source ""
+  "dictsource file to use when `greader-compile-at-point' is called.
+If `nil', you can not use `greader-compile-at-point'."
+  :tag "greader compile default dictionary source file"
+  :type 'string)
+
+(let (history)
+  (defun greader-compile-at-point (&optional src dst)
+    (interactive "P")
+    (unless greader-compile-default-source
+      (error "You must set or customize `greader-compile-default-source'"))
+
+    (unless src
+      (setq src (thing-at-point 'word t))
+      (unless src
+	(setq src (read-string "Word to add:"))))
+
+    (when (listp src)
+      (setq src (read-string "word to add:"))
+      (if (equal src "")
+	  (setq src (thing-at-point 'word t))))
+    (unless dst
+      (setq dst (read-string (concat "Redefine " src " to: ") nil history)))
+    (let ((lang-file
+	   (if (string-prefix-p "/" greader-compile-default-source)
+	       greader-compile-default-source
+	     (concat greader-compile-dictsource
+		     greader-compile-default-source))))
+      (with-current-buffer (find-file-noselect lang-file)
+	(goto-char (point-max))
+	(insert (concat src " " dst "\n"))
+	(save-buffer)
+	(unless greader-compile-mode
+	  (greader-compile))
+	(kill-buffer)))))
 
 (provide 'greader)
 ;;; greader.el ends here
