@@ -42,6 +42,32 @@
 
 ;;; Code:
 
+(defvar-local greader-timer-flag nil)
+
+(defvar greader-spaces '(" " "\t"))
+(defvar greader-hyphenation-newlines '("\r" "\n"))
+(defvar greader-hyphenation-symbol '("-" "‐"))
+(defvar greader-auto-tired-timer nil)
+(defvar greader-auto-tired-end-timer)
+(defvar greader-last-point nil)
+(defvar greader-tired-timer nil)
+(defvar greader-timer-enabled-interactively nil)
+(defvar greader-stop-timer 0)
+(defvar greader-elapsed-timer 0)
+(defvar greader-elapsed-time 0)
+(defvar greader-timer-flag nil)
+(defvar greader-tired-flag nil)
+(defvar greader-filter-enabled nil)
+(defvar point-limit nil)
+(defvar greader-differs nil)
+(defvar greader-not-start-of-sentence '(" " "\n" "\t"))
+(defvar greader-debug-buffer "spd-output"
+  "Contains the buffer name for debugging purposes.")
+(defvar greader-backend-action #'greader--default-action)
+(defvar greader-status 'paused)
+(defvar greader-synth-process nil)
+(require 'seq)
+
 (defgroup
   greader
   nil
@@ -67,7 +93,7 @@
   `(radio
     ,@(mapcar
        (lambda (backend)
-     `(function-item ,backend))
+	 `(function-item ,backend))
        greader-backends)))
 (defcustom
   greader-auto-tired-mode-time
@@ -161,6 +187,14 @@ if set to t, when you call function `greader-read', that function sets a
   :type 'boolean
   :tag "use register")
 
+(defun greader-set-reading-keymap ()
+  "Set greader's keymap when reading."
+  (setq greader--reading t))
+
+(defun greader-set-greader-keymap ()
+  "Set greader's keymap when not reading."
+  (setq greader--reading nil))
+
 (define-obsolete-variable-alias 'greader-map 'greader-mode-map "2022")
 (defvar greader-mode-map
   (let ((map (make-sparse-keymap)))
@@ -171,28 +205,34 @@ if set to t, when you call function `greader-read', that function sets a
     (define-key map (kbd "C-r t")   #'greader-toggle-timer)
     (define-key map (kbd "C-r f")   #'greader-get-attributes)
     (define-key map (kbd "C-r b")   #'greader-change-backend)
+    (define-key map (kbd "C-r c") #'greader-compile-at-point)
     map))
+
 (defvar greader-reading-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-r SPC") #'greader-stop)
-    (define-key map (kbd "C-r p")   #'greader-toggle-punctuation)
-    (define-key map (kbd "C-r .")   #'greader-stop-with-timer)
-    (define-key map (kbd "c-r +")   #'greader-inc-rate)
-    (define-key map (kbd "c-r -")   #'greader-dec-rate)
+    (define-key map (kbd "SPC") #'greader-stop)
+    (define-key map (kbd "p")   #'greader-toggle-punctuation)
+    (define-key map (kbd ".")   #'greader-stop-with-timer)
+    (define-key map (kbd "+")   #'greader-inc-rate)
+    (define-key map (kbd "-")   #'greader-dec-rate)
     map))
+
 (defvar-local greader--reading nil
   "If non-nil, `greader-reading-map' is active.")
 
-;###autoload
+
+
+					;###autoload
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
   :group 'greader
+
   (cond
    (greader-mode
     (add-to-list 'minor-mode-map-alist
-		 `(greader--reading . ,greader-reading-map)))
-   (greader-load-backends)))
+		 `(greader--reading . ,greader-reading-map))
+    (greader-load-backends))))
 
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
@@ -233,30 +273,30 @@ backends."
   (interactive
    (list
     (if current-prefix-arg
-    (completing-read"back-end:" (greader--get-backends)))))
+	(completing-read"back-end:" (greader--get-backends)))))
   (if (functionp backend)
       (if (memq backend greader-backends)
-      (setq-local greader-actual-backend backend)
-    (error "%s" "The function you have specified is not a greader's back-end.")))
+	  (setq-local greader-actual-backend backend)
+	(error "%s" "The function you have specified is not a greader's back-end.")))
   (if (stringp backend)
       (progn
-    (let ((result nil))
-      (dolist (elem greader-backends result)
-        (if
-        (equal
-         (get elem 'greader-backend-name) backend)
-        (setq result elem)))
-      (if result
-          (setq-local greader-actual-backend result)
-        (error "%s" "the function name you have specified is not a greader's back-end.")))))
+	(let ((result nil))
+	  (dolist (elem greader-backends result)
+	    (if
+		(equal
+		 (get elem 'greader-backend-name) backend)
+		(setq result elem)))
+	  (if result
+	      (setq-local greader-actual-backend result)
+	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
   (if (not backend)
       (let
-      ((index (seq-position greader-backends greader-actual-backend))
-       (len (length greader-backends)))
-    (if
-        (= (+ index 1) len)
-        (setq-local greader-actual-backend (elt greader-backends 0))
-      (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
+	  ((index (seq-position greader-backends greader-actual-backend))
+	   (len (length greader-backends)))
+	(if
+	    (= (+ index 1) len)
+	    (setq-local greader-actual-backend (elt greader-backends 0))
+	  (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
   (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
 
 (defun greader-load-backends ()
@@ -276,14 +316,14 @@ backends."
     (setq txt text)
     (setq backend (append greader-backend `(,txt) backend))
     (and (stringp txt) (setq-local greader-synth-process (make-process
-                              :name "greader-backend"
-                              :sentinel 'greader-action
-                              :filter 'greader-process-filter
-                              :command backend)))
+							  :name "greader-backend"
+							  :sentinel 'greader-action
+							  :filter 'greader-process-filter
+							  :command backend)))
     (if greader-debug
-    (progn
-      (set-process-buffer greader-synth-process greader-debug-buffer)
-      (greader-debug (message "greader-read-asynchronous: %S" backend))))))
+	(progn
+	  (set-process-buffer greader-synth-process greader-debug-buffer)
+	  (greader-debug (message "greader-read-asynchronous: %S" backend))))))
 
 (defun greader-get-status ()
   "Return greader status."
@@ -301,8 +341,8 @@ backends."
   "Sentinel for greader processes using PROCESS and EVENT."
   (if greader-debug
       (progn
-    (greader-debug "greader-action entered.\n")
-    (greader-debug (format "event: %S\n" event))))
+	(greader-debug "greader-action entered.\n")
+	(greader-debug (format "event: %S\n" event))))
   (when greader-backend-action
     (funcall greader-backend-action process event)))
 
@@ -312,7 +352,7 @@ backends."
   (if
       (not
        (eq
-    (greader-call-backend 'stop) 'not-implemented))
+	(greader-call-backend 'stop) 'not-implemented))
       (greader-call-backend 'stop))
   (delete-process greader-synth-process)
   (setq-local greader-backend-action 'greader--default-action))
@@ -336,22 +376,22 @@ Optional argument EVENT ."
   (greader-reset)
   (let (args arg)
     (setq arg
-      (greader-call-backend 'rate))
+	  (greader-call-backend 'rate))
     (setq args (append `(,arg) args))
     (cond ((greader-call-backend 'lang)
-       (setq arg
-         (greader-call-backend 'lang))
-       (setq args (append `(,arg) args))))
+	   (setq arg
+		 (greader-call-backend 'lang))
+	   (setq args (append `(,arg) args))))
     (cond ((greader-call-backend 'punctuation)
-       (setq arg (greader-call-backend 'punctuation))
-       (setq args (append `(,arg) args))))
+	   (setq arg (greader-call-backend 'punctuation))
+	   (setq args (append `(,arg) args))))
     (setq greader-backend (greader-call-backend 'executable))
     (cond
      (
       (not
        (eq
-    (greader-call-backend 'extra)
-    'not-implemented))
+	(greader-call-backend 'extra)
+	'not-implemented))
       (setq arg (greader-call-backend 'extra))
       (setq args (append `(,arg) args))))
     (setq greader-backend (append `(,greader-backend) args))))
@@ -372,35 +412,32 @@ Argument EVENT ."
   "Start reading of current buffer.
 if `GOTO-MARKER' is t and if you pass a prefix to this
   function, point jumps at the last position you called command `greader-read'."
+
   (interactive "P")
   (when goto-marker
     (greader-jump-to-register))
   (when (called-interactively-p 'any)
     (greader-set-register))
-  (if (and greader-tired-flag (= greader-elapsed-time 0))
-      (progn
-    (if greader-tired-timer
-        (cancel-timer greader-tired-timer))
-    (setq-local greader-last-point (point))))
+
   (cond
    ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
     (greader-setup-timers)))
   (let ((chunk (funcall greader-read-chunk-of-text)))
     (if chunk
-    (progn
-      ;; This extra verification is necessary because espeak has a bug that,
-      ;; when we pass a string containing a vocal plus only 2 .. it reads
-      ;; garbage.
-      (if (string-suffix-p ".." chunk)
-          (setq chunk (concat chunk ".")))
-      (greader-set-reading-keymap)
-      (setq-local greader-read 'greader-read) ;FIXME: Unused?
-      (setq-local greader-backend-action #'greader-next-action)
-      (greader-read-asynchronous chunk))
+	(progn
+	  ;; This extra verification is necessary because espeak has a bug that,
+	  ;; when we pass a string containing a vocal plus only 2 .. it reads
+	  ;; garbage.
+	  (if (string-suffix-p ".." chunk)
+	      (setq chunk (concat chunk ".")))
+	  (greader-set-reading-keymap)
+
+	  (setq-local greader-backend-action #'greader-next-action)
+	  (greader-read-asynchronous chunk))
       (progn
-    (setq-local greader-backend-action 'greader--default-action)
-    (greader-set-greader-keymap)
-    (greader-read-asynchronous ". end")))))
+	(setq-local greader-backend-action 'greader--default-action)
+	(greader-set-greader-keymap)
+	(greader-read-asynchronous ". end")))))
 
 (defun greader-response-for-dissociate (&optional _prompt)
   "Return t to the caller until a condition is reached.
@@ -409,7 +446,7 @@ This function will be locally bound to `y.or-n-p' until
 Optional argument PROMPT variable not used."
   (with-current-buffer greader-orig-buffer
     (if (< (buffer-size greader-dissoc-buffer) 100000)
-    t
+	t
       nil)))
 
 (defun greader-read-dissociated ()
@@ -421,33 +458,19 @@ mindfullness!)."
   (setq greader-dissoc-buffer (get-buffer-create "*Dissociation*"))
   (unwind-protect
       (progn
-    (fset 'greader-temp-function (symbol-function 'y-or-n-p))
-    (fset 'y-or-n-p (symbol-function
-             'greader-response-for-dissociate))
-    (let ((arg (random 10)))
-      (while (equal arg 0)
-        (setq arg (random 10)))
-      (dissociated-press arg))
-    (switch-to-buffer greader-dissoc-buffer)
-    (goto-char (point-min))
+	(fset 'greader-temp-function (symbol-function 'y-or-n-p))
+	(fset 'y-or-n-p (symbol-function
+			 'greader-response-for-dissociate))
+	(let ((arg (random 10)))
+	  (while (equal arg 0)
+	    (setq arg (random 10)))
+	  (dissociated-press arg))
+	(switch-to-buffer greader-dissoc-buffer)
+	(goto-char (point-min))
 
-    (greader-mode 1)
-    (greader-read))
+	(greader-mode 1)
+	(greader-read))
     (fset 'y-or-n-p (symbol-function 'greader-temp-function))))
-
-(defun greader-set-reading-keymap ()
-  "Set greader's keymap when reading."
-  (if (assoc 'greader-mode minor-mode-map-alist)
-      (progn
-    (setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
-    (setq minor-mode-map-alist (push `(greader-mode . ,greader-reading-map) minor-mode-map-alist)))))
-
-(defun greader-set-greader-keymap ()
-  "Set greader's keymap when not reading."
-  (if (assoc 'greader-mode minor-mode-map-alist)
-      (progn
-    (setq minor-mode-map-alist (assq-delete-all 'greader-mode minor-mode-map-alist))
-    (setq minor-mode-map-alist (push `(greader-mode . ,greader-map) minor-mode-map-alist)))))
 
 (defun greader-stop ()
   "Stops reading of document."
@@ -457,7 +480,7 @@ mindfullness!)."
     (greader-cancel-elapsed-timer)
     (greader-cancel-stop-timer)
     (if (>= greader-elapsed-time (1- (greader-convert-mins-to-secs greader-timer)))
-    (greader-reset-elapsed-time))
+	(greader-reset-elapsed-time))
     (setq-local greader-stop-timer 0)))
   (greader-set-greader-keymap)
   (greader-tts-stop))
@@ -483,9 +506,9 @@ which search for."
       (setq direction 1))
   (if (< direction 0)
       (progn
-    (setq point-limit 'point-min)
-    (setq direction '-)
-    (setq greader-differs '>))
+	(setq point-limit 'point-min)
+	(setq direction '-)
+	(setq greader-differs '>))
     (progn
       (setq point-limit 'point-max)
       (setq direction '+)
@@ -493,13 +516,13 @@ which search for."
   (catch 'afterloop
     (save-excursion
       (while (funcall greader-differs (point) (funcall point-limit))
-    (cond
-     ((greader-end-sentence-p)
-      (goto-char (funcall direction (point) 1))
-      (while (member (string (following-char)) greader-not-start-of-sentence)
-        (goto-char (funcall direction 1 (point))))
-      (throw 'afterloop (point))))
-    (goto-char (funcall direction (point) 1))))
+	(cond
+	 ((greader-end-sentence-p)
+	  (goto-char (funcall direction (point) 1))
+	  (while (member (string (following-char)) greader-not-start-of-sentence)
+	    (goto-char (funcall direction 1 (point))))
+	  (throw 'afterloop (point))))
+	(goto-char (funcall direction (point) 1))))
     (funcall point-limit)))
 
 (defun greader-forward-sentence ()
@@ -510,10 +533,10 @@ which search for."
     (setq sentence-start (point))
     (save-excursion
       (when (not (eobp))
-    (forward-sentence))
+	(forward-sentence))
       (if (> (point) sentence-start)
-      (buffer-substring-no-properties sentence-start (point))
-    nil))))
+	  (buffer-substring-no-properties sentence-start (point))
+	nil))))
 
 (defun greader-sentence-at-point ()
   "Get sentence starting from point."
@@ -524,15 +547,15 @@ which search for."
   (catch 'endsentence
     (save-excursion
       (if (eobp)
-      (throw 'endsentence t))
+	  (throw 'endsentence t))
       (if
-      (and
-       (greader-punct-p (string (following-char)))
-       (progn
-         (goto-char (+ (point) 1))
-         (member (string (following-char)) greader-not-start-of-sentence)))
-      t
-    nil))))
+	  (and
+	   (greader-punct-p (string (following-char)))
+	   (progn
+	     (goto-char (+ (point) 1))
+	     (member (string (following-char)) greader-not-start-of-sentence)))
+	  t
+	nil))))
 
 (defun greader-process-filter (_process string)
   "Process filter.
@@ -558,10 +581,10 @@ buffer, so if you want to set it globally, please use 'm-x
   (interactive)
   (if (not (greader-call-backend 'punctuation))
       (progn
-    (greader-stop)
-    (greader-set-punctuation 'yes)
-    (message "punctuation enabled in current buffer")
-    (greader-read))
+	(greader-stop)
+	(greader-set-punctuation 'yes)
+	(message "punctuation enabled in current buffer")
+	(greader-read))
     (progn
       (greader-stop)
       (greader-set-punctuation 'no)
@@ -575,9 +598,9 @@ buffer, so if you want to set it globally, please use 'm-x
     (setq-local greader-timer-flag nil)
     (greader-reset-elapsed-time)
     (if (not (equal greader-elapsed-timer 0))
-    (greader-cancel-elapsed-timer))
+	(greader-cancel-elapsed-timer))
     (if (and greader-auto-tired-mode greader-tired-flag)
-    (greader-toggle-tired-mode)))
+	(greader-toggle-tired-mode)))
    ((not greader-timer-flag)
     (setq-local greader-timer-flag t))))
 
@@ -589,12 +612,12 @@ To configure the timer \(in minutes\) call `M-x greader-set-timer' or
   (greader-toggle-timer-flag)
   (if greader-timer-flag
       (progn
-    (setq-local greader-timer-enabled-interactively t)
-    (message "timer enabled in current buffer"))
+	(setq-local greader-timer-enabled-interactively t)
+	(message "timer enabled in current buffer"))
     (progn
       (setq-local greader-timer-enabled-interactively nil)
       (if greader-tired-flag
-      (greader-toggle-tired-flag))
+	  (greader-toggle-tired-flag))
       (message "timer disabled in current buffer"))))
 
 (defun greader-set-timer (&optional timer-in-mins)
@@ -656,10 +679,10 @@ time elapsed before you stopped."
   (interactive)
   (if (greader-timer-flag-p)
       (progn
-    (greader-cancel-elapsed-timer)
-    (greader-cancel-stop-timer)
-    (setq-local greader-stop-timer 0)
-    (greader-reset-elapsed-time)))
+	(greader-cancel-elapsed-timer)
+	(greader-cancel-stop-timer)
+	(setq-local greader-stop-timer 0)
+	(greader-reset-elapsed-time)))
   (greader-stop))
 
 (defun greader-stop-timer-callback ()
@@ -685,12 +708,12 @@ If it is disabled, greader will stop reading immediately after timer expiration.
   "Not documented, internal use."
   (if greader-tired-flag
       (progn
-    (if greader-timer-flag
-        (greader-toggle-timer))
-    (setq-local greader-tired-flag nil))
+	(if greader-timer-flag
+	    (greader-toggle-timer))
+	(setq-local greader-tired-flag nil))
     (progn
       (if (not greader-timer-flag)
-      (greader-toggle-timer)))
+	  (greader-toggle-timer)))
     (setq-local greader-tired-flag t)))
 
 (defun greader-toggle-tired-mode ()
@@ -703,13 +726,13 @@ Enabling tired mode implicitly enables timer also."
   (interactive)
   (if (not greader-tired-flag)
       (progn
-    (greader-toggle-tired-flag)
-    (if (not (greader-timer-flag-p))
-        (greader-toggle-timer-flag))
-    (message "tired mode enabled in current buffer."))
+	(greader-toggle-tired-flag)
+	(if (not (greader-timer-flag-p))
+	    (greader-toggle-timer-flag))
+	(message "tired mode enabled in current buffer."))
     (progn
       (if (not greader-timer-enabled-interactively)
-      (greader-toggle-timer-flag))
+	  (greader-toggle-timer-flag))
 
       (greader-toggle-tired-flag)
       (message "tired mode disabled in current buffer"))))
@@ -719,9 +742,9 @@ Enabling tired mode implicitly enables timer also."
   (if greader-tired-flag
       (run-with-idle-timer
        (time-add
-    (current-idle-time)
-    (seconds-to-time
-     greader-tired-time)) nil 'greader-tired-mode-callback)))
+	(current-idle-time)
+	(seconds-to-time
+	 greader-tired-time)) nil 'greader-tired-mode-callback)))
 
 (defun greader-tired-mode-callback ()
   "Not documented, internal use."
@@ -736,21 +759,21 @@ Enabling tired mode implicitly enables timer also."
   "Not documented, internal use."
   (if greader-auto-tired-mode
       (progn
-    (if (not greader-tired-flag)
-        (greader-toggle-tired-mode))
-    (setq-local greader-auto-tired-timer(run-at-time nil 1 'greader-auto-tired-callback)))
+	(if (not greader-tired-flag)
+	    (greader-toggle-tired-mode))
+	(setq-local greader-auto-tired-timer(run-at-time nil 1 'greader-auto-tired-callback)))
     (progn
       (if greader-tired-flag
-      (greader-toggle-tired-mode))
+	  (greader-toggle-tired-mode))
       (setq-local greader-auto-tired-timer (cancel-timer greader-auto-tired-timer)))))
 
 (defun greader-toggle-auto-tired-mode-flag ()
   "Not documented, internal use."
   (if greader-auto-tired-mode
       (progn
-    (setq-local greader-auto-tired-mode nil)
-    (if greader-auto-tired-timer
-        (cancel-timer greader-auto-tired-timer)))
+	(setq-local greader-auto-tired-mode nil)
+	(if greader-auto-tired-timer
+	    (cancel-timer greader-auto-tired-timer)))
     (progn
       (setq-local greader-auto-tired-mode t)
       (greader-auto-tired-mode-setup))))
@@ -760,8 +783,8 @@ In this mode, greader will enter in tired mode at a customizable time
   and will exit from it at another time.  The default is 22:00 for
   entering and 08:00 for exiting."  (interactive)
   (greader-toggle-auto-tired-mode-flag) (if greader-auto-tired-mode
-                        (message "auto-tired mode enabled in current buffer") (message
-                                                   "auto-tired mode disabled in current buffer.")))
+					    (message "auto-tired mode enabled in current buffer") (message
+												   "auto-tired mode disabled in current buffer.")))
 
 (defun greader-current-time ()
   "Not documented, internal use."
@@ -770,18 +793,18 @@ In this mode, greader will enter in tired mode at a customizable time
 (defun greader-convert-time (time)
   "Not documented, internal use."
   (let ((current-t (decode-time))
-    (i (nth 2 (decode-time)))
-    (counter (nth 2 (decode-time))))
+	(i (nth 2 (decode-time)))
+	(counter (nth 2 (decode-time))))
     (if (stringp time)
-    (setq time (string-to-number time)))
+	(setq time (string-to-number time)))
     (catch 'done
       (while t
-    (if (= i time)
-        (throw 'done nil))
-    (cl-incf i)
-    (cl-incf counter)
-    (if (= i 24)
-        (setq i 0))))
+	(if (= i time)
+	    (throw 'done nil))
+	(cl-incf i)
+	(cl-incf counter)
+	(if (= i 24)
+	    (setq i 0))))
     (setcar (cdr (cdr current-t)) counter)
     (setcar current-t 0)
     (setcar (cdr current-t) 0)
@@ -792,8 +815,8 @@ In this mode, greader will enter in tired mode at a customizable time
   (let
       ((current-t (current-time)))
     (if
-    (and (time-less-p time1 current-t) (time-less-p current-t time2))
-    t
+	(and (time-less-p time1 current-t) (time-less-p current-t time2))
+	t
       nil)))
 
 (defun greader-auto-tired-callback ()
@@ -814,9 +837,9 @@ In this mode, greader will enter in tired mode at a customizable time
        (not (greader-current-time-in-interval-p greader-auto-tired-mode-time greader-auto-tired-time-end))
        greader-tired-flag)
       (progn
-    (setq-local greader-auto-tired-mode-time (number-to-string (nth 2 (decode-time greader-auto-tired-mode-time))))
-        (setq-local greader-auto-tired-time-end (number-to-string (nth 2 (decode-time greader-auto-tired-time-end))))
-    (greader-toggle-tired-mode))))
+	(setq-local greader-auto-tired-mode-time (number-to-string (nth 2 (decode-time greader-auto-tired-mode-time))))
+	(setq-local greader-auto-tired-time-end (number-to-string (nth 2 (decode-time greader-auto-tired-time-end))))
+	(greader-toggle-tired-mode))))
 
 (defun greader-set-rate (n)
   "Set rate in current buffer to tthe specified value in N.
