@@ -1019,7 +1019,15 @@ If `nil', you can not use `greader-compile-at-point'."
     (save-buffer)
     (unless greader-compile-mode
       (greader-compile))))))
+(defun greader-compile-goto-source ()
+  "Visit default dictsource currently used by
+`greader-compile-at-point.'"
 
+  (interactive)
+  (if (string-match "/" greader-compile-default-source)
+      (find-file greader-compile-default-source)
+    (find-file (concat (car greader-compile-dictsource)
+		       greader-espeak-language "_" greader-compile-default-source))))
 
 (provide 'greader)
 ;;; greader.el ends here
