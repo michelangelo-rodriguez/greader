@@ -56,7 +56,7 @@
 (defvar greader-tired-flag nil)
 (defvar greader-filter-enabled nil)
 (defvar greader-debug-buffer "spd-output"
-"Contains the buffer name for debugging purposes.")
+  "Contains the buffer name for debugging purposes.")
 (defvar greader-backend-action #'greader--default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
@@ -216,7 +216,7 @@ if set to t, when you call function `greader-read', that function sets a
 (defvar-local greader--reading nil
   "If non-nil, `greader-reading-map' is active.")
 
-;###autoload
+					;###autoload
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
@@ -226,7 +226,7 @@ if set to t, when you call function `greader-read', that function sets a
    (greader-mode
     (add-to-list 'minor-mode-map-alist
 		 `(greader--reading . ,greader-reading-map))
-   (greader-load-backends))))
+    (greader-load-backends))))
 
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
@@ -447,30 +447,30 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
   (when (called-interactively-p 'any)
     (greader-set-register))
 
-(if (and greader-tired-flag (= greader-elapsed-time 0))
-    (progn
-      (if greader-tired-timer
-	  (cancel-timer greader-tired-timer))
-      (setq-local greader-last-point (point))))
-
-(cond
- ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
-  (greader-setup-timers)))
-(let ((chunk (funcall greader-read-chunk-of-text)))
-  (if chunk
+  (if (and greader-tired-flag (= greader-elapsed-time 0))
       (progn
-	;; This extra verification is necessary because espeak has a bug that,
-	;; when we pass a string containing a vocal plus only 2 .. it reads
-	;; garbage.
-	(if (string-suffix-p ".." chunk)
-	    (setq chunk (concat chunk ".")))
-	(greader-set-reading-keymap)
-	(setq-local greader-backend-action #'greader-next-action)
-	(greader-read-asynchronous chunk))
-    (progn
-      (setq-local greader-backend-action 'greader--default-action)
-      (greader-set-greader-keymap)
-      (greader-read-asynchronous ". end")))))
+	(if greader-tired-timer
+	    (cancel-timer greader-tired-timer))
+	(setq-local greader-last-point (point))))
+
+  (cond
+   ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
+    (greader-setup-timers)))
+  (let ((chunk (funcall greader-read-chunk-of-text)))
+    (if chunk
+	(progn
+	  ;; This extra verification is necessary because espeak has a bug that,
+	  ;; when we pass a string containing a vocal plus only 2 .. it reads
+	  ;; garbage.
+	  (if (string-suffix-p ".." chunk)
+	      (setq chunk (concat chunk ".")))
+	  (greader-set-reading-keymap)
+	  (setq-local greader-backend-action #'greader-next-action)
+	  (greader-read-asynchronous chunk))
+      (progn
+	(setq-local greader-backend-action 'greader--default-action)
+	(greader-set-greader-keymap)
+	(greader-read-asynchronous ". end")))))
 
 (defun greader-stop ()
   "Stops reading of document."
@@ -485,39 +485,13 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
   (greader-set-greader-keymap)
   (greader-tts-stop))
 
-(defun greader-next-sentence (&optional direction)
-  "Get next sentence to read.
-Optional argument DIRECTION used for determining the direction in
-which search for."
-  (if (not direction)
-      (setq direction 1))
-  (if (< direction 0)
-      (progn
-	(setq point-limit 'point-min)
-	(setq direction '-)
-	(setq greader-differs '>))
-    (progn
-      (setq point-limit 'point-max)
-      (setq direction '+)
-      (setq greader-differs '<)))
-  (catch 'afterloop
-    (save-excursion
-      (while (funcall greader-differs (point) (funcall point-limit))
-	(cond
-	 ((greader-end-sentence-p)
-	  (goto-char (funcall direction (point) 1))
-	  (while (member (string (following-char)) greader-not-start-of-sentence)
-	    (goto-char (funcall direction 1 (point))))
-	  (throw 'afterloop (point))))
-	(goto-char (funcall direction (point) 1))))
-    (funcall point-limit)))
 (defun greader-debug (arg)
-    "Used to get some fast debugging.
+  "Used to get some fast debugging.
   Argument ARG is not used."
-    (save-current-buffer
-      (get-buffer-create greader-debug-buffer)
-      (set-buffer greader-debug-buffer)
-      (insert arg)))
+  (save-current-buffer
+    (get-buffer-create greader-debug-buffer)
+    (set-buffer greader-debug-buffer)
+    (insert arg)))
 
 (defun greader-forward-sentence ()
   (forward-sentence))
@@ -535,7 +509,6 @@ which search for."
 (defun greader-sentence-at-point ()
   "Get sentence starting from point."
   (greader-get-sentence))
-
 
 (defun greader-process-filter (_process string)
   "Process filter.
@@ -871,7 +844,7 @@ In general you should specify an alternative path for espeak voice
   :tag "greader compile extra parameters"
   :type '(repeat :tag "extra parameter" string))
 
-;###autoload
+					;###autoload
 
 (define-minor-mode greader-compile-mode
   "Questo minor-mode globale di greader permette il salvataggio di un
@@ -1009,16 +982,17 @@ If `nil', you can not use `greader-compile-at-point'."
       (setq dst (read-string (concat "Redefine " src " to: ") nil
 			     history)))
 
-(let ((lang-file
-       (if (string-prefix-p "/" greader-compile-default-source)
-	   greader-compile-default-source
-	 (concat (car greader-compile-dictsource) (substring greader-espeak-language 0 2) "_" greader-compile-default-source))))
-  (with-current-buffer (find-file-noselect lang-file)
-    (goto-char (point-max))
-    (insert (concat src " " dst "\n"))
-    (save-buffer)
-    (unless greader-compile-mode
-      (greader-compile))))))
+    (let ((lang-file
+	   (if (string-prefix-p "/" greader-compile-default-source)
+	       greader-compile-default-source
+	     (concat (car greader-compile-dictsource) (substring greader-espeak-language 0 2) "_" greader-compile-default-source))))
+      (with-current-buffer (find-file-noselect lang-file)
+	(goto-char (point-max))
+	(insert (concat src " " dst "\n"))
+	(save-buffer)
+	(unless greader-compile-mode
+	  (greader-compile))))))
+
 (defun greader-compile-goto-source ()
   "Visit default dictsource currently used by
 `greader-compile-at-point.'"
