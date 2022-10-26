@@ -42,9 +42,8 @@
 
 ;;; Code:
 
-(defvar greader-spaces '(" " "\t"))
-(defvar greader-hyphenation-newlines '("\r" "\n"))
-(defvar greader-hyphenation-symbol '("-" "‐"))
+(defvar-local greader-timer-flag nil)
+
 (defvar greader-auto-tired-timer nil)
 (defvar greader-auto-tired-end-timer)
 (defvar greader-last-point nil)
@@ -55,14 +54,10 @@
 (defvar greader-elapsed-time 0)
 (defvar greader-timer-flag nil)
 (defvar greader-tired-flag nil)
-(defvar greader-filter-enabled t)
-(defvar point-limit nil)
-(defvar greader-differs nil)
-(defvar greader-not-start-of-sentence '(" " "\n" "\t"))
-(defvar greader-end-of-sentence '("." "?" "!" ":"))
+(defvar greader-filter-enabled nil)
 (defvar greader-debug-buffer "spd-output"
   "Contains the buffer name for debugging purposes.")
-(defvar greader-backend-action 'greader--default-action)
+(defvar greader-backend-action #'greader--default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
 (require 'seq)
@@ -72,6 +67,10 @@
   nil
   "Greader customization."
   :group 'convenience)
+(defcustom greader-hyphen-regex "[-‐]\n+[[:blank:]]*"
+  "Regex to use when dehyphenation is needed."
+  :type 'string
+  :tag "greader hyphen regex")
 
 (defcustom
   greader-backends
@@ -79,17 +78,19 @@
   "A list of functions that are back-ends for greader."
   :tag "greader back-ends"
   :type '(repeat function))
+
 (defcustom
-  greader-actual-backend
+  greader-current-backend
   'greader-espeak
   "Greader back-end to use."
-  :tag "greader actual back-end"
+  :tag "greader current back-end"
   :type
   `(radio
     ,@(mapcar
        (lambda (backend)
 	 `(function-item ,backend))
        greader-backends)))
+
 (defcustom
   greader-auto-tired-mode-time
   "22"
@@ -155,24 +156,24 @@ customize your key definitions for greader, for example."
   :tag "greader-mode hook"
   :type 'hook)
 
-(defcustom greader-move-to-next-chung
-  'greader-forward-sentence
-  "Sets the function that moves the cursor for the next chung of text.
+(defcustom greader-move-to-next-chunk   
+  #'greader-forward-sentence
+  "The function that moves the cursor for the next chunk of text.
 For example if you have specified `sentence-at-point' function to get
-the actual chung, you should specify `forward-sentence' for this
+the current chunk, you should specify `forward-sentence' for this
 variable."
-  :tag "greader move to next chung function"
+  :tag "greader move to next chunk function"
   :type 'function)
 
-(defcustom greader-read-chung-of-text
-  'greader-sentence-at-point
-  "Sets the function used to get the portion of text to read.
-The variable `greader-move-to-next-chung' must be set to a function that
+(defcustom greader-read-chunk-of-text
+  #'greader-sentence-at-point
+  "The function used to get the portion of text to read.
+The variable `greader-move-to-next-chunk' must be set to a function that
 moves the cursor to the same amount of text that is set in this
 variable.  For example, if you specify a function that gets a
 sentence, you should specify a function that moves to the next one."
   :type 'function
-  :tag "greader get chung of text function")
+  :tag "greader get chunk of text function")
 (defcustom greader-use-prefix t
   "Toggle on or off for use register feature.
 if set to t, when you call function `greader-read', that function sets a
@@ -192,15 +193,18 @@ if set to t, when you call function `greader-read', that function sets a
     (define-key map (kbd "C-r t")   #'greader-toggle-timer)
     (define-key map (kbd "C-r f")   #'greader-get-attributes)
     (define-key map (kbd "C-r b")   #'greader-change-backend)
+    (define-key map (kbd "C-r c") #'greader-compile-at-point)
     map))
+
 (defvar greader-reading-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-r SPC") #'greader-stop)
-    (define-key map (kbd "C-r p")   #'greader-toggle-punctuation)
-    (define-key map (kbd "C-r .")   #'greader-stop-with-timer)
-    (define-key map (kbd "c-r +")   #'greader-inc-rate)
-    (define-key map (kbd "c-r -")   #'greader-dec-rate)
+    (define-key map (kbd "SPC") #'greader-stop)
+    (define-key map (kbd "p")   #'greader-toggle-punctuation)
+    (define-key map (kbd ".")   #'greader-stop-with-timer)
+    (define-key map (kbd "+")   #'greader-inc-rate)
+    (define-key map (kbd "-")   #'greader-dec-rate)
     map))
+
 (defvar-local greader--reading nil
   "If non-nil, `greader-reading-map' is active.")
 
@@ -209,13 +213,13 @@ if set to t, when you call function `greader-read', that function sets a
   nil
   :lighter " greader"
   :group 'greader
+
   (cond
    (greader-mode
     (add-to-list 'minor-mode-map-alist
-                 `(greader--reading . ,greader-reading-map))
+		 `(greader--reading . ,greader-reading-map))
     (greader-load-backends))))
 
-;;;code
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
   (when greader-use-prefix
@@ -238,8 +242,8 @@ if set to t, when you call function `greader-read', that function sets a
 \(internal use!\)."
 
   (if arg
-      (funcall greader-actual-backend command arg)
-    (funcall greader-actual-backend command)))
+      (funcall greader-current-backend command arg)
+    (funcall greader-current-backend command)))
 (defvar
   greader-backend-filename
   (greader-call-backend 'executable))
@@ -329,8 +333,8 @@ backends."
     (funcall greader-backend-action process event)))
 
 (defun greader-tts-stop ()
-"Stop reading of current buffer."
-  (set-process-sentinel greader-synth-process #'greader--default-action)
+  "Stop reading of current buffer."
+  (set-process-sentinel greader-synth-process 'greader--default-action)
   (if
       (not
        (eq
@@ -381,48 +385,15 @@ Optional argument EVENT ."
 (defun greader-reset ()
   "Reset greader."
   (setq greader-backend `(,(greader-call-backend 'executable))))
+
 (defun greader-next-action (_process event)
   "Perform next action when reading.
 Argument PROCESS .
 Argument EVENT ."
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
-  (funcall greader-move-to-next-chung)
-  (funcall 'greader-read))
-
-(defun greader-read (&optional goto-marker)
-  "Start reading of current buffer.
-if `GOTO-MARKER' is t and if you pass a prefix to this
-  function, point jumps at the last position you called command `greader-read'."
-  (interactive "P")
-  (when goto-marker
-    (greader-jump-to-register))
-  (when (called-interactively-p 'any)
-    (greader-set-register))
-  (if (and greader-tired-flag (= greader-elapsed-time 0))
-      (progn
-	(if greader-tired-timer
-	    (cancel-timer greader-tired-timer))
-	(setq-local greader-last-point (point))))
-  (cond
-   ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
-    (greader-setup-timers)))
-  (let ((chung (funcall greader-read-chung-of-text)))
-    (if chung
-	(progn
-					; this extra verification is necessary because espeak has a bug that,
-					; when we pass a string containing a vocal plus only 2 .. it reads
-					; garbage.
-	  (if (string-suffix-p ".." chung)
-	      (setq chung (concat chung ".")))
-	  (greader-set-reading-keymap)
-	  (setq-local greader-read 'greader-read)
-	  (setq-local greader-backend-action 'greader-next-action)
-	  (greader-read-asynchronous chung))
-      (progn
-	(setq-local greader-backend-action 'greader--default-action)
-	(greader-set-greader-keymap)
-	(greader-read-asynchronous ". end")))))
+  (funcall greader-move-to-next-chunk)
+  (greader-read))
 
 (defun greader-response-for-dissociate (&optional _prompt)
   "Return t to the caller until a condition is reached.
@@ -431,7 +402,7 @@ This function will be locally bound to `y.or-n-p' until
 Optional argument PROMPT variable not used."
   (with-current-buffer greader-orig-buffer
     (if (< (buffer-size greader-dissoc-buffer) 100000)
-      t
+	t
       nil)))
 
 (defun greader-read-dissociated (&optional arg)
@@ -459,13 +430,41 @@ you want by calling this function with a prefix."
 	(greader-read))
     (fset 'y-or-n-p (symbol-function 'greader-temp-function))))
 
-(defun greader-set-reading-keymap ()
-  "Set greader's keymap when reading."
-  (setq greader--reading t))
+(defun greader-read (&optional goto-marker)
+  "Start reading of current buffer.
+if `GOTO-MARKER' is t and if you pass a prefix to this
+  function, point jumps at the last position you called command `greader-read'."
 
-(defun greader-set-greader-keymap ()
-  "Set greader's keymap when not reading."
-  (setq greader--reading nil))
+  (interactive "P")
+  (when goto-marker
+    (greader-jump-to-register))
+  (when (called-interactively-p 'any)
+    (greader-set-register))
+
+  (if (and greader-tired-flag (= greader-elapsed-time 0))
+      (progn
+	(if greader-tired-timer
+	    (cancel-timer greader-tired-timer))
+	(setq-local greader-last-point (point))))
+
+  (cond
+   ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
+    (greader-setup-timers)))
+  (let ((chunk (funcall greader-read-chunk-of-text)))
+    (if chunk
+	(progn
+	  ;; This extra verification is necessary because espeak has a bug that,
+	  ;; when we pass a string containing a vocal plus only 2 .. it reads
+	  ;; garbage.
+	  (if (string-suffix-p ".." chunk)
+	      (setq chunk (concat chunk ".")))
+	  (greader-set-reading-keymap)
+	  (setq-local greader-backend-action #'greader-next-action)
+	  (greader-read-asynchronous chunk))
+      (progn
+	(setq-local greader-backend-action 'greader--default-action)
+	(greader-set-greader-keymap)
+	(greader-read-asynchronous ". end")))))
 
 (defun greader-stop ()
   "Stops reading of document."
@@ -479,95 +478,31 @@ you want by calling this function with a prefix."
     (setq-local greader-stop-timer 0)))
   (greader-set-greader-keymap)
   (greader-tts-stop))
+
 (defun greader-debug (arg)
   "Used to get some fast debugging.
-Argument ARG is not used."
+  Argument ARG is not used."
   (save-current-buffer
     (get-buffer-create greader-debug-buffer)
     (set-buffer greader-debug-buffer)
     (insert arg)))
 
-(defun greader-punct-p (arg)
-  "Return t if ARG is a punctuation symbol."
-  (if (member arg greader-end-of-sentence)
-      t
-    nil))
-
-(defun greader-next-sentence (&optional direction)
-  "Get next sentence to read.
-Optional argument DIRECTION used for determining the direction in
-which search for."
-  (if (not direction)
-      (setq direction 1))
-  (if (< direction 0)
-      (progn
-	(setq point-limit 'point-min)
-	(setq direction '-)
-	(setq greader-differs '>))
-    (progn
-      (setq point-limit 'point-max)
-      (setq direction '+)
-      (setq greader-differs '<)))
-  (catch 'afterloop
-    (save-excursion
-      (while (funcall greader-differs (point) (funcall point-limit))
-	(cond
-	 ((greader-end-sentence-p)
-	  (goto-char (funcall direction (point) 1))
-	  (while (member (string (following-char)) greader-not-start-of-sentence)
-	    (goto-char (funcall direction 1 (point))))
-	  (throw 'afterloop (point))))
-	(goto-char (funcall direction (point) 1))))
-    (funcall point-limit)))
-
 (defun greader-forward-sentence ()
-  "Bring point at start of next sentence to read."
-  (goto-char (greader-next-sentence)))
+  (forward-sentence))
 
-(defun greader-get-sentence (&optional direction)
-  "Get next sentence to read.
-Optional argument DIRECTION is actually not used."
-  (if (not direction)
-      (setq direction 1))
-  (if (< direction 0)
-      (progn
-	(setq direction '-)
-	(setq point-limit 'point-min)
-	(setq greader-differs '>))
-    (progn
-      (setq direction '+)
-      (setq point-limit 'point-max)
-      (setq greader-differs '<)))
-
-  (let (sentence)
-    (catch 'afterloop
-      (save-excursion
-	(while (funcall greader-differs (point) (funcall point-limit))
-	  (setq sentence (concat sentence (string (following-char))))
-	  (cond
-	   ((greader-end-sentence-p)
-	    (throw 'afterloop sentence)))
-	  (goto-char (funcall direction (point) 1)))
-	sentence))))
+(defun greader-get-sentence ()
+  (let ((sentence-start (make-marker)))
+    (setq sentence-start (point))
+    (save-excursion
+      (when (not (eobp))
+	(forward-sentence))
+      (if (> (point) sentence-start)
+	  (buffer-substring-no-properties sentence-start (point))
+	nil))))
 
 (defun greader-sentence-at-point ()
   "Get sentence starting from point."
   (greader-get-sentence))
-
-(defun greader-end-sentence-p ()
-  "Return t if current character is considered an end of sentence."
-  (catch 'endsentence
-    (save-excursion
-      (if (eobp)
-	  (throw 'endsentence t))
-      (if
-	  (and
-	   (greader-punct-p (string (following-char)))
-	   (progn
-	     (goto-char (+ (point) 1))
-	     (member (string (following-char)) greader-not-start-of-sentence)))
-	  t
-	nil))))
 
 (defun greader-process-filter (_process string)
   "Process filter.
@@ -604,7 +539,7 @@ buffer, so if you want to set it globally, please use
       (greader-read))))
 
 (defun greader-toggle-timer-flag ()
-"Not yet documented."
+  "Not yet documented."
   (cond
    (greader-timer-flag
     (setq-local greader-timer-flag nil)
@@ -761,7 +696,8 @@ Enabling tired mode implicitly enables timer also."
 	(seconds-to-time greader-tired-time))
        nil #'greader-tired-mode-callback)))
 
-(defun greader--tired-mode-callback ()
+(defun greader-tired-mode-callback ()
+  "Not documented, internal use."
   (if (equal last-command 'greader-read)
       (greader-move-to-last-point)))
 
@@ -798,8 +734,8 @@ In this mode, greader will enter in tired mode at a customizable time
   and will exit from it at another time.  The default is 22:00 for
   entering and 08:00 for exiting."  (interactive)
   (greader-toggle-auto-tired-mode-flag) (if greader-auto-tired-mode
-  (message "auto-tired mode enabled in current buffer") (message
-  "auto-tired mode disabled in current buffer.")))
+					    (message "auto-tired mode enabled in current buffer") (message
+												   "auto-tired mode disabled in current buffer.")))
 
 (defun greader-current-time ()
   "Not documented, internal use."
@@ -857,14 +793,13 @@ In this mode, greader will enter in tired mode at a customizable time
        greader-tired-flag)
       (progn
 	(setq-local greader-auto-tired-mode-time (number-to-string (nth 2 (decode-time greader-auto-tired-mode-time))))
-        (setq-local greader-auto-tired-time-end (number-to-string (nth 2 (decode-time greader-auto-tired-time-end))))
+	(setq-local greader-auto-tired-time-end (number-to-string (nth 2 (decode-time greader-auto-tired-time-end))))
 	(greader-toggle-tired-mode))))
 
 (defun greader-set-rate (n)
   "Set rate in current buffer to tthe specified value in N.
 rate is expressed in words per minute.  For maximum value, see `man espeak'."
   (greader-call-backend 'rate n))
-
 
 (defun greader-inc-rate (&optional n)
   "Increment rate of speech by N units.
@@ -887,49 +822,188 @@ If prefix, it will be used to decrement  rate."
   (greader-read))
 
 (defun greader-sentence-needs-dehyphenation (str)
-  "Return t if STR has lines iphenated."
-  (let
-      ((i 0)
-       ;; (j 0)
-       )
-    (catch 'done
-      (while (< i (length str))
-	(if (and (member (string (aref str i)) greader-hyphenation-symbol)
-		 (member (string (aref str (1+ i))) greader-hyphenation-newlines))
-	    (progn
-	      ;; (setq j 1)
-	      (throw 'done t)))
-	(cl-incf i))
-      ;; (if (= j 0)
-      nil ;;)
-      )))
+  (if (string-match greader-hyphen-regex str)
+      t
+    nil))
 
-(defun greader-dehyphenate (str)
-  "Dehyphenate STR.
-new lines can be either in unix stile, or ms, or macosX."
-  (let
-      ((new-sentence "")
-       (i 0)
-       )
-    (while (< i (length str))
-      (catch 'done
-	(if
-	    (and
-	     (member (string (aref str i)) greader-hyphenation-symbol)
-	     (member (string (aref str (+ i 1))) greader-hyphenation-newlines))
-	    (progn
-	      (cl-incf i)
-	      (while (or (member (string (aref str i)) greader-hyphenation-newlines)
-			 (member (string (aref str i)) greader-spaces))
-		(cl-incf i))
-	      (throw 'done nil)))
-	(setq new-sentence (concat new-sentence (string (aref str i))))
-	(cl-incf i)))
-    new-sentence))
+(defun greader-dehyphenate (sentence)
+  (replace-regexp-in-string greader-hyphen-regex "" sentence))
+
 (defun greader-get-attributes ()
   "Print text properties associated with current char."
   (interactive)
   (print (text-properties-at (point))))
+
+(defcustom greader-compile-command "--compile="
+  "espeak-ng parameter to compile a lang."
+  :tag "greader compile command"
+  :type 'string)
+
+(defcustom greader-compile-extra-parameters nil
+  "Extra parameters to pass to espeak-ng.
+In general you should specify an alternative path for espeak voice
+  data."
+  :tag "greader compile extra parameters"
+  :type '(repeat :tag "extra parameter" string))
+
+					;###autoload
+
+(define-minor-mode greader-compile-mode
+  "Questo minor-mode globale di greader permette il salvataggio di un
+file dizionario di espeak-ng e la successiva compilazione della voce
+corrispondente in una sola operazione.
+In alcuni casi, la directory in cui espeak-ng conserva i dati relativi
+alle lingue non è scrivibile dall'utente normale, in questo caso, al
+salvataggio del file, verrà chiesto d'inserire la password di
+amministratore.
+Verrà chiesto anche se si vorrà salvare la password nel database
+auth-info.
+Per disabilitare quest'ultima domanda, configurare la variabile
+`greader-compile-ask-for-authinfo'
+Il valore predefinito è off, quindi la password di amministratore
+verrà chiesta sempre."
+  :global t
+
+  (if greader-compile-mode
+      (progn
+	(unless greader-compile-dictsource
+	  (error "Please set or customize `greader-compile-dictsource'
+    to define espeak-ng dictionary source location."))
+	(add-hook 'after-save-hook 'greader-check-visited-file)
+	(message "greader-compile minor mode enabled"))
+    (when (member 'greader-check-visited-file after-save-hook)
+      (message "greader-compile mode disabled")
+      (remove-hook 'after-save-hook 'greader-check-visited-file))))
+
+(defun greader-compile (&optional lang)
+
+  "La funzione greader-compile, se chiamata interattivamente, compila le
+definizioni di espeak-ng per una determinata lingua.
+In modo predefinito, greader-compile deduce la lingua dalle prime due
+lettere del file che si sta visitando.
+Se il suo parametro LANG è `non-nil', la funzione chiederà di
+specificare la lingua da compilare, ignorando il nome del file attuale
+ma proponendolo come default.
+In caso la lingua specificata non dovesse sembrare compatibile con
+l'ambiente del buffer, questa funzione chiederà conferma prima di
+procedere.
+Avviso importante: il parametro serve esclusivamente per una chiamata
+interattiva, dato che la funzione utilizza il minibuffer per ottenere
+la lingua.
+Se non viene chiamata interattivamente, non passarle argomenti, la
+funzione è progettata specificamente per essere eseguita da un hook."
+
+  (interactive "P")
+
+  (if lang
+      (progn
+
+	(setq lang (read-from-minibuffer "Language (2 letters):"
+					 nil
+					 nil
+					 nil
+					 nil
+					 nil
+					 (greader-compile-guess-lang))))
+
+    (setq lang (greader-compile-guess-lang))
+
+    (let (data-is-writable (command (append '("espeak") (list (concat greader-compile-command lang)) greader-compile-extra-parameters)))
+
+      (with-temp-buffer
+	(call-process "espeak" nil t t "--version")
+	(goto-char (point-min))
+	(search-forward "/")
+	(setq data-is-writable (file-writable-p (thing-at-point
+						 'filename))))
+
+      (if (not data-is-writable)
+	  (setq command (append '("sudo")command)))
+
+      (let ((espeak-process (make-process
+			     :name "greader-espeak"
+			     :filter 'greader-compile--filter
+			     :command command)))))))
+
+(defun greader-compile--filter (&optional process str)
+  (when (string-match "password" str)
+    (process-send-string process (concat (read-passwd str) "\n")))
+  (when (string-match "error" str)
+    (error "%s" str)))
+
+(defun greader-compile-guess-lang ()
+  (when (buffer-file-name)
+    (let*
+	((lang (buffer-file-name))
+
+	 (start (string-match "/[[:alpha:]][[:alpha:]]_" lang))
+
+	 end)
+      (if start
+	  (progn
+	    (setq start (1+ start))
+	    (setq end (string-match "_" lang start))
+	    (substring lang start end))
+	nil))))
+
+(defcustom greader-compile-dictsource nil
+  "Location of espeak dictionary source data.
+You must configure this variable in order to use
+  `greader-compile-mode'."
+  :tag "greader compile source dictionary directory"
+  :type '(repeat :tag "directory:" string))
+
+(defun greader-check-visited-file ()
+  (and
+   (member default-directory greader-compile-dictsource)
+   (greader-compile-guess-lang)
+   (greader-compile)))
+
+(defcustom greader-compile-default-source "extra"
+  "dictsource file suffix to use when `greader-compile-at-point' is called.
+If `nil', you can not use `greader-compile-at-point'."
+  :tag "greader compile default dictionary source file"
+  :type 'string)
+
+(let (history)
+  (defun greader-compile-at-point (&optional src dst)
+    (interactive "P")
+    (unless greader-compile-default-source
+      (error "You must set or customize `greader-compile-default-source'"))
+
+    (unless src
+      (setq src (thing-at-point 'word t))
+      (unless src
+	(setq src (read-string "Word to add:"))))
+
+    (when (listp src)
+      (setq src (read-string "word to add:"))
+      (if (equal src "")
+	  (setq src (thing-at-point 'word t))))
+    (unless dst
+      (setq dst (read-string (concat "Redefine " src " to: ") nil
+			     history)))
+
+    (let ((lang-file
+	   (if (string-prefix-p "/" greader-compile-default-source)
+	       greader-compile-default-source
+	     (concat (car greader-compile-dictsource) (substring greader-espeak-language 0 2) "_" greader-compile-default-source))))
+      (with-current-buffer (find-file-noselect lang-file)
+	(goto-char (point-max))
+	(insert (concat src " " dst "\n"))
+	(save-buffer)
+	(unless greader-compile-mode
+	  (greader-compile))))))
+
+(defun greader-compile-goto-source ()
+  "Visit default dictsource currently used by
+`greader-compile-at-point.'"
+
+  (interactive)
+  (if (string-match "/" greader-compile-default-source)
+      (find-file greader-compile-default-source)
+    (find-file (concat (car greader-compile-dictsource)
+		       greader-espeak-language "_" greader-compile-default-source))))
+
 (provide 'greader)
 ;;; greader.el ends here
-
