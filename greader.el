@@ -536,20 +536,6 @@ which search for."
   "Get sentence starting from point."
   (greader-get-sentence))
 
-(defun greader-end-sentence-p ()
-  "Return t if current character is considered an end of sentence."
-  (catch 'endsentence
-    (save-excursion
-      (if (eobp)
-	  (throw 'endsentence t))
-      (if
-	  (and
-	   (greader-punct-p (string (following-char)))
-	   (progn
-	     (goto-char (+ (point) 1))
-	     (member (string (following-char)) greader-not-start-of-sentence)))
-	  t
-	nil))))
 
 (defun greader-process-filter (_process string)
   "Process filter.
