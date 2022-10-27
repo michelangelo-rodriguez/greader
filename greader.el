@@ -270,7 +270,7 @@ backends."
 	(completing-read"back-end:" (greader--get-backends)))))
   (if (functionp backend)
       (if (memq backend greader-backends)
-	  (setq-local greader-actual-backend backend)
+	  (setq-local greader-current-backend backend)
 	(error "%s" "The function you have specified is not a greader's back-end.")))
   (if (stringp backend)
       (progn
@@ -281,17 +281,17 @@ backends."
 		 (get elem 'greader-backend-name) backend)
 		(setq result elem)))
 	  (if result
-	      (setq-local greader-actual-backend result)
+	      (setq-local greader-current-backend result)
 	    (error "%s" "the function name you have specified is not a greader's back-end.")))))
   (if (not backend)
       (let
-	  ((index (seq-position greader-backends greader-actual-backend))
+	  ((index (seq-position greader-backends greader-current-backend))
 	   (len (length greader-backends)))
 	(if
 	    (= (+ index 1) len)
-	    (setq-local greader-actual-backend (elt greader-backends 0))
-	  (setq-local greader-actual-backend (elt greader-backends (+ index 1))))))
-  (message "Actual back-end is %s." (get greader-actual-backend 'greader-backend-name)))
+	    (setq-local greader-current-backend (elt greader-backends 0))
+	  (setq-local greader-current-backend (elt greader-backends (+ index 1))))))
+  (message "Current back-end is %s." (get greader-current-backend 'greader-backend-name)))
 
 (defun greader-load-backends ()
   "Load backends taken from `greader-backends'."
