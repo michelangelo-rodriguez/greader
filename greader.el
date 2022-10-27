@@ -183,6 +183,14 @@ if set to t, when you call function `greader-read', that function sets a
   :type 'boolean
   :tag "use register")
 
+(defun greader-set-reading-keymap ()
+  "Set greader's keymap when reading."
+  (setq greader--reading t))
+
+(defun greader-set-greader-keymap ()
+  "Set greader's keymap when not reading."
+  (setq greader--reading nil))
+
 (define-obsolete-variable-alias 'greader-map 'greader-mode-map "2022")
 (defvar greader-mode-map
   (let ((map (make-sparse-keymap)))
@@ -287,7 +295,7 @@ backends."
 
 (defun greader-load-backends ()
   "Load backends taken from `greader-backends'."
-  (mapcar #'require greader-backends))
+  (mapcar 'require greader-backends))
 
 (defun greader-read-asynchronous (txt)
   "Read the text given in TXT."
@@ -405,17 +413,11 @@ Optional argument PROMPT variable not used."
 	t
       nil)))
 
-(defun greader-read-dissociated (&optional arg)
+(defun greader-read-dissociated ()
   "Use `dissociated-press to read a text dissociately.
 \(Helpful for
-mindfullness!). If ARG is nil, it will be chosen randomly (from 1 to
-10) to pass to `dissociated-press'. You can specify which contiguity
-you want by calling this function with a prefix."
-  (interactive "P")
-  (if (not arg)
-      (progn
-	(while (or (equal arg 0) (not arg))
-	  (setq arg (random 10)))))
+mindfullness!)."
+  (interactive)
   (setq greader-orig-buffer (current-buffer))
   (setq greader-dissoc-buffer (get-buffer-create "*Dissociation*"))
   (unwind-protect
@@ -423,9 +425,13 @@ you want by calling this function with a prefix."
 	(fset 'greader-temp-function (symbol-function 'y-or-n-p))
 	(fset 'y-or-n-p (symbol-function
 			 'greader-response-for-dissociate))
-	(dissociated-press arg)
+	(let ((arg (random 10)))
+	  (while (equal arg 0)
+	    (setq arg (random 10)))
+	  (dissociated-press arg))
 	(switch-to-buffer greader-dissoc-buffer)
 	(goto-char (point-min))
+
 	(greader-mode 1)
 	(greader-read))
     (fset 'y-or-n-p (symbol-function 'greader-temp-function))))
@@ -513,10 +519,10 @@ Optional argument STRING contains the string passed to
 
 (defun greader-set-language (lang)
   "Set language of tts.
-LANG must be in ISO code, for example `en' for english or `fr' for
+LANG must be in ISO code, for example 'en' for english or 'fr' for
 french.  This function set the language of tts local for current
-buffer, so if you want to set it globally, please use
-    M-x customize-option RET greader-language RET"
+buffer, so if you want to set it globally, please use 'm-x
+`customize-option' <RET> greader-language <RET>'."
   (interactive "sset language to:")
   (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
@@ -591,12 +597,8 @@ Optional argument TIMER-IN-MINS timer in minutes (integer)."
   (catch 'timer-is-nil
     (cond
      ((greader-timer-flag-p)
-      (setq-local greader-stop-timer
-                  (run-at-time (- (greader-convert-mins-to-secs greader-timer)
-                                  greader-elapsed-time)
-                               nil #'greader-stop-timer-callback))
-      (setq-local greader-elapsed-timer
-                  (run-at-time 1 1 #'greader-elapsed-time)))
+      (setq-local greader-stop-timer (run-at-time (- (greader-convert-mins-to-secs greader-timer) greader-elapsed-time) nil 'greader-stop-timer-callback))
+      (setq-local greader-elapsed-timer (run-at-time 1 1 'greader-elapsed-time)))
      ((not (greader-timer-flag-p))
       (throw 'timer-is-nil nil))))
   t)
@@ -688,13 +690,14 @@ Enabling tired mode implicitly enables timer also."
       (greader-toggle-tired-flag)
       (message "tired mode disabled in current buffer"))))
 
-(defun greader--setup-tired-timer ()
+(defun greader-setup-tired-timer ()
+  "Not documented, internal use."
   (if greader-tired-flag
       (run-with-idle-timer
        (time-add
 	(current-idle-time)
-	(seconds-to-time greader-tired-time))
-       nil #'greader-tired-mode-callback)))
+	(seconds-to-time
+	 greader-tired-time)) nil 'greader-tired-mode-callback)))
 
 (defun greader-tired-mode-callback ()
   "Not documented, internal use."
@@ -711,8 +714,7 @@ Enabling tired mode implicitly enables timer also."
       (progn
 	(if (not greader-tired-flag)
 	    (greader-toggle-tired-mode))
-	(setq-local greader-auto-tired-timer
-	            (run-at-time nil 1 #'greader-auto-tired-callback)))
+	(setq-local greader-auto-tired-timer(run-at-time nil 1 'greader-auto-tired-callback)))
     (progn
       (if greader-tired-flag
 	  (greader-toggle-tired-mode))
@@ -743,16 +745,12 @@ In this mode, greader will enter in tired mode at a customizable time
 
 (defun greader-convert-time (time)
   "Not documented, internal use."
-  ;; FIXME: Should we try to make this function work with non-integer
-  ;; value of `time'?
-  (let* ((current-t (decode-time))
-	 (i (nth 2 current-t))          ;Current hour.
-	 (counter i))
+  (let ((current-t (decode-time))
+	(i (nth 2 (decode-time)))
+	(counter (nth 2 (decode-time))))
     (if (stringp time)
 	(setq time (string-to-number time)))
     (catch 'done
-      ;; FIXME: This will inf-loop if `time' > 23!
-      ;; FIXME: Can't this loop be replaced with (+ i (mod (- time i) 24))?
       (while t
 	(if (= i time)
 	    (throw 'done nil))
@@ -760,10 +758,10 @@ In this mode, greader will enter in tired mode at a customizable time
 	(cl-incf counter)
 	(if (= i 24)
 	    (setq i 0))))
-    (setf (nth 2 current-t) counter)
-    (setf (nth 0 current-t) 0)
-    (setf (nth 1 current-t) 0)
-    (apply #'encode-time current-t)))
+    (setcar (cdr (cdr current-t)) counter)
+    (setcar current-t 0)
+    (setcar (cdr current-t) 0)
+    (apply 'encode-time current-t)))
 
 (defun greader-current-time-in-interval-p (time1 time2)
   "Not documented, internal use."
@@ -798,7 +796,7 @@ In this mode, greader will enter in tired mode at a customizable time
 
 (defun greader-set-rate (n)
   "Set rate in current buffer to tthe specified value in N.
-rate is expressed in words per minute.  For maximum value, see `man espeak'."
+rate is expressed in words per minute.  For maximum value, see 'man espeak'."
   (greader-call-backend 'rate n))
 
 (defun greader-inc-rate (&optional n)
