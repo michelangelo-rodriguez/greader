@@ -503,7 +503,7 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
       (when (not (eobp))
 	(forward-sentence))
       (if (> (point) sentence-start)
-	  (buffer-substring-no-properties sentence-start (point))
+	  (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
 	nil))))
 
 (defun greader-sentence-at-point ()
