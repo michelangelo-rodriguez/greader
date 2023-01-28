@@ -503,7 +503,7 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
       (when (not (eobp))
 	(forward-sentence))
       (if (> (point) sentence-start)
-	  (buffer-substring-no-properties sentence-start (point))
+	  (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
 	nil))))
 
 (defun greader-sentence-at-point ()
@@ -523,7 +523,13 @@ LANG must be in ISO code, for example 'en' for english or 'fr' for
 french.  This function set the language of tts local for current
 buffer, so if you want to set it globally, please use 'm-x
 `customize-option' <RET> greader-language <RET>'."
-  (interactive "sset language to:")
+  (interactive
+   (list
+    (let (result)
+      (setq result (greader-call-backend 'set-voice nil))
+      (when (equal result 'not-implemented)
+	(setq result (read-string "Set language to: ")))
+      result)))
   (greader-call-backend 'lang lang))
 (defun greader-set-punctuation (flag)
   "Set punctuation to FLAG."
