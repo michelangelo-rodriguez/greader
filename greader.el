@@ -494,17 +494,23 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
     (insert arg)))
 
 (defun greader-forward-sentence ()
-  (forward-sentence))
+  (let ((result (greader-call-backend 'next-text)))
+    (if (not (equal result 'not-implemented))
+	result
+      (forward-sentence))))
 
 (defun greader-get-sentence ()
-  (let ((sentence-start (make-marker)))
-    (setq sentence-start (point))
-    (save-excursion
-      (when (not (eobp))
-	(forward-sentence))
-      (if (> (point) sentence-start)
-	  (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
-	nil))))
+  (let ((result (greader-call-backend 'get-text)))
+    (if (stringp result)
+	result
+      (let ((sentence-start (make-marker)))
+	(setq sentence-start (point))
+	(save-excursion
+	  (when (not (eobp))
+	    (forward-sentence))
+	  (if (> (point) sentence-start)
+	      (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
+	    nil))))))
 
 (defun greader-sentence-at-point ()
   "Get sentence starting from point."
