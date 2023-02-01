@@ -21,6 +21,9 @@ nil means to use the system voice."
   :tag "mac tts command"
   :type 'string)
 
+(defvar greader-mac-end-of-sentence-regexp "[.?!,][«»\"]?[\n ]"
+  "A regexp that matches the end of the string to send to the tts.")
+
 (defun greader-mac-set-rate (&optional rate)
   "Return a string suitable for setting mac RATE."
   (if (not rate)
@@ -58,6 +61,10 @@ When called interactively, this function reads a string from the minibuffer prov
   "Back-end main function of greader-mac.
 COMMAND must be a string suitable for `make-process'."
   (pcase command
+    ('get-text
+     (greader-mac-get-sentence))
+    ('next-text
+     (greader-mac-forward-sentence))
     ('executable
      greader-mac-executable-name)
     ('lang
@@ -75,6 +82,21 @@ COMMAND must be a string suitable for `make-process'."
     (_
      'not-implemented)))
 (put 'greader-mac 'greader-backend-name "greader-mac")
+
+(defun greader-mac-get-sentence ()
+  (let ((sentence-start (make-marker)))
+    (setq sentence-start (point))
+    (save-excursion
+      (when (not (eobp))
+	(if (not (re-search-forward greader-mac-end-of-sentence-regexp nil t))
+	    (end-of-buffer))
+      (if (> (point) sentence-start)
+	  (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
+	nil)))))
+
+(defun greader-mac-forward-sentence ()
+  (if (not (re-search-forward greader-mac-end-of-sentence-regexp nil t))
+      (end-of-buffer)))
 
 (defun greader--mac-get-voices ()
   "Return a list which contains all voices suitable for this backend."
