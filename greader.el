@@ -156,7 +156,7 @@ customize your key definitions for greader, for example."
   :tag "greader-mode hook"
   :type 'hook)
 
-(defcustom greader-move-to-next-chunk   
+(defcustom greader-move-to-next-chunk
   #'greader-forward-sentence
   "The function that moves the cursor for the next chunk of text.
 For example if you have specified `sentence-at-point' function to get
@@ -182,6 +182,9 @@ if set to t, when you call function `greader-read', that function sets a
   is set at register position then reading starts from there."
   :type 'boolean
   :tag "use register")
+
+(defvar-local greader--reading nil
+  "If non-nil, `greader-reading-map' is active.")
 
 (defun greader-set-reading-keymap ()
   "Set greader's keymap when reading."
@@ -525,10 +528,10 @@ Optional argument STRING contains the string passed to
 
 (defun greader-set-language (lang)
   "Set language of tts.
-LANG must be in ISO code, for example 'en' for english or 'fr' for
-french.  This function set the language of tts local for current
-buffer, so if you want to set it globally, please use 'm-x
-`customize-option' <RET> greader-language <RET>'."
+LANG must be in ISO code, for example `en' for english or `fr' for
+french.  This function sets the language of tts local for current
+buffer, so if you want to set it globally, please use `m-x
+customize-option <RET> greader-language <RET>'."
   (interactive
    (list
     (let (result)
@@ -808,7 +811,7 @@ In this mode, greader will enter in tired mode at a customizable time
 
 (defun greader-set-rate (n)
   "Set rate in current buffer to tthe specified value in N.
-rate is expressed in words per minute.  For maximum value, see 'man espeak'."
+rate is expressed in words per minute.  For maximum value, see `man espeak'."
   (greader-call-backend 'rate n))
 
 (defun greader-inc-rate (&optional n)
@@ -885,8 +888,8 @@ verrà chiesta sempre."
       (message "greader-compile mode disabled")
       (remove-hook 'after-save-hook 'greader-check-visited-file))))
 
+(defvar greader-compile-history nil)
 (defun greader-compile (&optional lang)
-
   "La funzione greader-compile, se chiamata interattivamente, compila le
 definizioni di espeak-ng per una determinata lingua.
 In modo predefinito, greader-compile deduce la lingua dalle prime due
@@ -930,10 +933,10 @@ funzione è progettata specificamente per essere eseguita da un hook."
       (if (not data-is-writable)
 	  (setq command (append '("sudo")command)))
 
-      (let ((espeak-process (make-process
-			     :name "greader-espeak"
-			     :filter 'greader-compile--filter
-			     :command command)))))))
+      (make-process
+       :name "greader-espeak"
+       :filter 'greader-compile--filter
+       :command command))))
 
 (defun greader-compile--filter (&optional process str)
   (when (string-match "password" str)
@@ -975,35 +978,34 @@ If `nil', you can not use `greader-compile-at-point'."
   :tag "greader compile default dictionary source file"
   :type 'string)
 
-(let (history)
-  (defun greader-compile-at-point (&optional src dst)
-    (interactive "P")
-    (unless greader-compile-default-source
-      (error "You must set or customize `greader-compile-default-source'"))
+(defun greader-compile-at-point (&optional src dst)
+  (interactive "P")
+  (unless greader-compile-default-source
+    (error "You must set or customize `greader-compile-default-source'"))
 
+  (unless src
+    (setq src (thing-at-point 'word t))
     (unless src
-      (setq src (thing-at-point 'word t))
-      (unless src
-	(setq src (read-string "Word to add:"))))
+      (setq src (read-string "Word to add:"))))
 
-    (when (listp src)
-      (setq src (read-string "word to add:"))
-      (if (equal src "")
-	  (setq src (thing-at-point 'word t))))
-    (unless dst
-      (setq dst (read-string (concat "Redefine " src " to: ") nil
-			     history)))
+  (when (listp src)
+    (setq src (read-string "word to add:"))
+    (if (equal src "")
+	(setq src (thing-at-point 'word t))))
+  (unless dst
+    (setq dst (read-string (concat "Redefine " src " to: ") nil
+			   'greader-compile-history)))
 
-    (let ((lang-file
-	   (if (string-prefix-p "/" greader-compile-default-source)
-	       greader-compile-default-source
-	     (concat (car greader-compile-dictsource) (substring greader-espeak-language 0 2) "_" greader-compile-default-source))))
-      (with-current-buffer (find-file-noselect lang-file)
-	(goto-char (point-max))
-	(insert (concat src " " dst "\n"))
-	(save-buffer)
-	(unless greader-compile-mode
-	  (greader-compile))))))
+  (let ((lang-file
+	 (if (string-prefix-p "/" greader-compile-default-source)
+	     greader-compile-default-source
+	   (concat (car greader-compile-dictsource) (substring greader-espeak-language 0 2) "_" greader-compile-default-source))))
+    (with-current-buffer (find-file-noselect lang-file)
+      (goto-char (point-max))
+      (insert (concat src " " dst "\n"))
+      (save-buffer)
+      (unless greader-compile-mode
+	(greader-compile)))))
 
 (defun greader-compile-goto-source ()
   "Visit default dictsource currently used by
