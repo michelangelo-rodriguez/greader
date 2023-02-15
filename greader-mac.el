@@ -1,3 +1,6 @@
+;;; greader.el --- gnamù reader, send buffer contents to a speech engine. -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2017-2022  Free Software Foundation, Inc.
 (defgroup greader-mac
   nil
   "Back-end of mac for greader."
