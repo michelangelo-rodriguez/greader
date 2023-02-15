@@ -56,7 +56,7 @@
 (defvar greader-tired-flag nil)
 (defvar greader-filter-enabled nil)
 (defvar greader-debug-buffer "spd-output"
-"Contains the buffer name for debugging purposes.")
+  "Contains the buffer name for debugging purposes.")
 (defvar greader-backend-action #'greader--default-action)
 (defvar greader-status 'paused)
 (defvar greader-synth-process nil)
@@ -218,7 +218,7 @@ if set to t, when you call function `greader-read', that function sets a
     (define-key map (kbd "<right>")   #'greader-forward)
     map))
 
-;###autoload
+					;###autoload
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
@@ -228,7 +228,7 @@ if set to t, when you call function `greader-read', that function sets a
    (greader-mode
     (add-to-list 'minor-mode-map-alist
 		 `(greader--reading . ,greader-reading-map))
-   (greader-load-backends))))
+    (greader-load-backends))))
 
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
@@ -449,30 +449,30 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
   (when (called-interactively-p 'any)
     (greader-set-register))
 
-(if (and greader-tired-flag (= greader-elapsed-time 0))
-    (progn
-      (if greader-tired-timer
-	  (cancel-timer greader-tired-timer))
-      (setq-local greader-last-point (point))))
-
-(cond
- ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
-  (greader-setup-timers)))
-(let ((chunk (funcall greader-read-chunk-of-text)))
-  (if chunk
+  (if (and greader-tired-flag (= greader-elapsed-time 0))
       (progn
-	;; This extra verification is necessary because espeak has a bug that,
-	;; when we pass a string containing a vocal plus only 2 .. it reads
-	;; garbage.
-	(if (string-suffix-p ".." chunk)
-	    (setq chunk (concat chunk ".")))
-	(greader-set-reading-keymap)
-	(setq-local greader-backend-action #'greader-next-action)
-	(greader-read-asynchronous chunk))
-    (progn
-      (setq-local greader-backend-action 'greader--default-action)
-      (greader-set-greader-keymap)
-      (greader-read-asynchronous ". end")))))
+	(if greader-tired-timer
+	    (cancel-timer greader-tired-timer))
+	(setq-local greader-last-point (point))))
+
+  (cond
+   ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
+    (greader-setup-timers)))
+  (let ((chunk (funcall greader-read-chunk-of-text)))
+    (if chunk
+	(progn
+	  ;; This extra verification is necessary because espeak has a bug that,
+	  ;; when we pass a string containing a vocal plus only 2 .. it reads
+	  ;; garbage.
+	  (if (string-suffix-p ".." chunk)
+	      (setq chunk (concat chunk ".")))
+	  (greader-set-reading-keymap)
+	  (setq-local greader-backend-action #'greader-next-action)
+	  (greader-read-asynchronous chunk))
+      (progn
+	(setq-local greader-backend-action 'greader--default-action)
+	(greader-set-greader-keymap)
+	(greader-read-asynchronous ". end")))))
 
 (defun greader-stop ()
   "Stops reading of document."
@@ -490,10 +490,10 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
 (defun greader-debug (arg)
   "Used to get some fast debugging.
 Argument ARG is not used."
-    (save-current-buffer
-      (get-buffer-create greader-debug-buffer)
-      (set-buffer greader-debug-buffer)
-      (insert arg)))
+  (save-current-buffer
+    (get-buffer-create greader-debug-buffer)
+    (set-buffer greader-debug-buffer)
+    (insert arg)))
 
 (defun greader-forward-sentence ()
   "Move the point to next sentence."
@@ -508,14 +508,14 @@ If at end of buffer, nil is returned."
   (let ((result (greader-call-backend 'get-text)))
     (if (stringp result)
 	result
-  (let ((sentence-start (make-marker)))
-    (setq sentence-start (point))
-    (save-excursion
-      (when (not (eobp))
-	(forward-sentence))
-      (if (> (point) sentence-start)
-	  (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
-	nil))))))
+      (let ((sentence-start (make-marker)))
+	(setq sentence-start (point))
+	(save-excursion
+	  (when (not (eobp))
+	    (forward-sentence))
+	  (if (> (point) sentence-start)
+	      (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
+	    nil))))))
 
 (defun greader-sentence-at-point ()
   "Get sentence starting from point."
@@ -865,7 +865,7 @@ In general you should specify an alternative path for espeak voice
   :tag "greader compile extra parameters"
   :type '(repeat :tag "extra parameter" string))
 
-;###autoload
+					;###autoload
 
 (defcustom greader-compile-dictsource nil
   "Location of espeak dictionary source data.
@@ -898,7 +898,7 @@ administrator."
 
 (defvar greader-compile-history nil)
 (defun greader-compile (&optional lang)
-"Compile espeak voice for a given LANG.
+  "Compile espeak voice for a given LANG.
 when called interactively, compile the
 espeak-ng definitions for a given language.
 By default, greader-compile infers the language from the first two
@@ -943,9 +943,9 @@ function is specifically designed to be executed by a hook."
 	  (setq command (append '("sudo")command)))
 
       (make-process
-			     :name "greader-espeak"
-			     :filter 'greader-compile--filter
-			     :command command))))
+       :name "greader-espeak"
+       :filter 'greader-compile--filter
+       :command command))))
 
 (defun greader-compile--filter (&optional process str)
   "Filter process for sudo."
@@ -989,7 +989,7 @@ If nil, you can not use `greader-compile-at-point'."
 
 (defvar greader-espeak-language)
 (defun greader-compile-at-point (&optional src dst)
-    "Add a word to the espeak dictionary definition.
+  "Add a word to the espeak dictionary definition.
 When called interactively and point is on a word, this function asks
   for the definition, assuming you want to define current word.
 If you want to be asked about the word to define, call this command
@@ -1013,16 +1013,16 @@ When called from a function, you should specify SRC and DST, even if
     (setq dst (read-string (concat "Redefine " src " to: ") nil
 			   'greader-compile-history)))
 
-(let ((lang-file
-       (if (string-prefix-p "/" greader-compile-default-source)
-	   greader-compile-default-source
-	 (concat (car greader-compile-dictsource) (substring greader-espeak-language 0 2) "_" greader-compile-default-source))))
-  (with-current-buffer (find-file-noselect lang-file)
-    (goto-char (point-max))
-    (insert (concat src " " dst "\n"))
-    (save-buffer)
-    (unless greader-compile-mode
-      (greader-compile)))))
+  (let ((lang-file
+	 (if (string-prefix-p "/" greader-compile-default-source)
+	     greader-compile-default-source
+	   (concat (car greader-compile-dictsource) (substring greader-espeak-language 0 2) "_" greader-compile-default-source))))
+    (with-current-buffer (find-file-noselect lang-file)
+      (goto-char (point-max))
+      (insert (concat src " " dst "\n"))
+      (save-buffer)
+      (unless greader-compile-mode
+	(greader-compile)))))
 
 (defun greader-compile-goto-source ()
   "Visit default dictsource currently used by `greader-compile-at-point'."
