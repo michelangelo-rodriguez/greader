@@ -214,10 +214,9 @@ if set to t, when you call function `greader-read', that function sets a
     (define-key map (kbd ".")   #'greader-stop-with-timer)
     (define-key map (kbd "+")   #'greader-inc-rate)
     (define-key map (kbd "-")   #'greader-dec-rate)
+    (define-key map (kbd "<left>")   #'greader-backward)
+    (define-key map (kbd "<right>")   #'greader-forward)    
     map))
-
-(defvar-local greader--reading nil
-  "If non-nil, `greader-reading-map' is active.")
 
 					;###autoload
 (define-minor-mode greader-mode
@@ -1016,6 +1015,51 @@ If `nil', you can not use `greader-compile-at-point'."
       (find-file greader-compile-default-source)
     (find-file (concat (car greader-compile-dictsource)
 		       greader-espeak-language "_" greader-compile-default-source))))
+
+(defcustom greader-backward-acoustic-feedback nil
+  "If t, when point returns to the end of sentence, plays a beep."
+  :tag "greader backward acoustic feedback"
+  :type 'boolean)
+
+(defcustom greader-backward-seconds 5
+  "Number of seconds to wait before returning at the end of sentence."
+  :tag "greader-backward seconds"
+  :type 'float)
+
+(defvar greader--marker-backward (make-marker))
+
+(defvar greader--timer-backward nil)
+
+(defun greader--forward ()
+  (when (equal
+	 (point) greader--marker-backward)
+    (forward-sentence)
+    (backward-char)
+    (when greader-backward-acoustic-feedback
+      (beep))))
+
+(defun greader-backward ()
+  (interactive)
+  (when (bobp)
+    (signal 'beginning-of-buffer ()))
+  (when greader--timer-backward
+    (cancel-timer greader--timer-backward)
+    (setq greader--timer-backward nil))
+  (greader-stop)
+  (backward-sentence)
+  (greader-set-register)
+  (setq greader--marker-backward (point))
+  (setq greader--timer-backward(run-with-idle-timer greader-backward-seconds nil #'greader--forward))
+  (greader-read))
+
+(defun greader-forward ()
+  (interactive)
+  (when (eobp)
+    (signal 'end-of-buffer nil))
+  (greader-stop)
+  (greader-forward-sentence)
+  (greader-set-register)
+  (greader-read))
 
 (provide 'greader)
 ;;; greader.el ends here
