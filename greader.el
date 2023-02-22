@@ -188,11 +188,14 @@ if set to t, when you call function `greader-read', that function sets a
 
 (defun greader-set-reading-keymap ()
   "Set greader's keymap when reading."
-  (setq greader--reading t))
+  (greader-mode -1)
+  (greader-reading-mode t))
 
 (defun greader-set-greader-keymap ()
   "Set greader's keymap when not reading."
-  (setq greader--reading nil))
+
+  (greader-mode t)
+  (greader-reading-mode -1))
 
 (define-obsolete-variable-alias 'greader-map 'greader-mode-map "2022")
 (defvar greader-mode-map
@@ -223,12 +226,15 @@ if set to t, when you call function `greader-read', that function sets a
   nil
   :lighter " greader"
   :group 'greader
-
   (cond
    (greader-mode
-    (add-to-list 'minor-mode-map-alist
-		 `(greader--reading . ,greader-reading-map))
     (greader-load-backends))))
+
+(define-minor-mode greader-reading-mode
+  nil
+  :interactive nil
+  :keymap greader-reading-map
+  :lighter "reading...")
 
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
