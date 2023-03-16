@@ -507,6 +507,8 @@ Argument ARG is not used."
 
 (defun greader-get-sentence ()
   "Get current sentence.
+Before returning sentence, this function runs
+`greader-before-get-sentence-functions'
 If at end of buffer, nil is returned."
   (let ((result (greader-call-backend 'get-text)))
     (if (stringp result)
