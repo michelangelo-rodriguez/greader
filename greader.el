@@ -183,9 +183,6 @@ if set to t, when you call function `greader-read', that function sets a
   :type 'boolean
   :tag "use register")
 
-(defvar-local greader--reading nil
-  "If non-nil, `greader-reading-map' is active.")
-
 (defun greader-set-reading-keymap ()
   "Set greader's keymap when reading."
   (greader-mode -1)
