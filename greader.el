@@ -62,6 +62,58 @@
 (defvar greader-synth-process nil)
 (require 'seq)
 
+(defvar greader-before-get-sentence-functions nil
+  "List of functions to run before getting a sentence.
+Functions in this variable don't receive arguments.")
+
+(defvar greader-after-get-sentence-functions nil
+  "Hook after getting a sentence.
+Functions in this hook take a string as argument, and should modify
+  that string that contains the sentence that will be read.
+the function should return modified sentence, or nil if no operation
+  was needed.")
+
+(defun greader--call-functions-after-get-of-sentence (sentence)
+  "Call functions in `greader-after-get-sentence-functions'.
+Return SENTENCE, eventually modified by the functions."
+  (if greader-after-get-sentence-functions
+      (progn
+	(let ((result sentence))
+	  (dolist (func greader-after-get-sentence-functions result)
+	    (setq result (funcall func result))
+	    (unless result
+	      (setq result sentence)))
+	  (if (not result)
+	      sentence
+	    result)))
+    sentence))
+
+(defvar greader-before-read-hook nil
+  "Code to execute just before start of reading.")
+
+(defvar greader-after-read-hook nil
+  "Execute code just after reading a sentence.")
+
+(defvar greader-before-finish-hook nil
+  "Code executed just after finishing reading of buffer.
+Functions in this hook should return non -nil if at least one function
+  returns non-nil, meaning that reading of buffer continues.
+If all the functions called return nil, reading finishes normally.")
+
+(defun greader--call-before-finish-functions ()
+  "Return t if at least one of the function return t.
+If all the functions in the hook return nil, this function return
+  nil."
+  (if greader-before-finish-hook
+      (progn
+	(let ((flag nil) (result nil))
+	  (dolist (func greader-before-finish-hook)
+	    (setq result (funcall func))
+	    (when result
+	      (setq flag t)))
+	  flag))
+    nil))
+
 (defgroup
   greader
   nil
@@ -306,6 +358,7 @@ backends."
   "Read the text given in TXT."
   (if greader-debug
       (greader-debug "greader-read-asynchronous entered\n"))
+  (run-hooks 'greader-before-read-hook)
   (greader-build-args)
   (if (and txt (greader-sentence-needs-dehyphenation txt))
       (setq txt (greader-dehyphenate txt)))
@@ -405,6 +458,7 @@ Argument PROCESS .
 Argument EVENT ."
   (if greader-debug
       (greader-debug (format "greader-next-action: %s" event)))
+  (run-hooks 'greader-after-read-hook)
   (funcall greader-move-to-next-chunk)
   (greader-read))
 
@@ -461,9 +515,11 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
   (cond
    ((and (greader-timer-flag-p) (not (timerp greader-stop-timer)))
     (greader-setup-timers)))
+  (run-hooks greader-before-get-sentence-functions)
   (let ((chunk (funcall greader-read-chunk-of-text)))
     (if chunk
 	(progn
+	  (setq chunk (greader--call-functions-after-get-of-sentence chunk))
 	  ;; This extra verification is necessary because espeak has a bug that,
 	  ;; when we pass a string containing a vocal plus only 2 .. it reads
 	  ;; garbage.
@@ -475,7 +531,8 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
       (progn
 	(setq-local greader-backend-action 'greader--default-action)
 	(greader-set-greader-keymap)
-	(greader-read-asynchronous ". end")))))
+	(unless (greader--call-before-finish-functions)
+	  (greader-read-asynchronous ". end"))))))
 
 (defun greader-stop ()
   "Stops reading of document."
