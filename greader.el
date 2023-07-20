@@ -62,11 +62,11 @@
 (defvar greader-synth-process nil)
 (require 'seq)
 
-(defvar greader-before-get-sentence-functions nil
+(defvar-local greader-before-get-sentence-functions nil
   "List of functions to run before getting a sentence.
 Functions in this variable don't receive arguments.")
 
-(defvar greader-after-get-sentence-functions nil
+(defvar-local greader-after-get-sentence-functions nil
   "Hook after getting a sentence.
 Functions in this hook take a string as argument, and should modify
   that string that contains the sentence that will be read.
@@ -88,13 +88,13 @@ Return SENTENCE, eventually modified by the functions."
 	    result)))
     sentence))
 
-(defvar greader-before-read-hook nil
+(defvar-local greader-before-read-hook nil
   "Code to execute just before start of reading.")
 
-(defvar greader-after-read-hook nil
+(defvar-local greader-after-read-hook nil
   "Execute code just after reading a sentence.")
 
-(defvar greader-before-finish-hook nil
+(defvar-local greader-before-finish-hook nil
   "Code executed just after finishing reading of buffer.
 Functions in this hook should return non -nil if at least one function
   returns non-nil, meaning that reading of buffer continues.
