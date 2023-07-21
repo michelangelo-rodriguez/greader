@@ -608,6 +608,10 @@ buffer, so if you want to set it globally, please use `m-x
   "Set punctuation to FLAG."
   (greader-call-backend 'punctuation flag))
 
+(defun greader-get-language ()
+  "return language set in current back-end."
+  (greader-call-backend 'get-language))
+
 (defun greader-toggle-punctuation ()
   "Toggle punctuation locally for current buffer."
   (interactive)
