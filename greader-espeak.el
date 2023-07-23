@@ -1,3 +1,5 @@
+; greader-espeak.el
+;; Copyright (C) 2017-2023  Free Software Foundation, Inc.
 (defgroup greader-espeak
   nil
   "Back-end of espeak for greader."
