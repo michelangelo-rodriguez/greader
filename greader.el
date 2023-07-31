@@ -80,9 +80,10 @@ Return SENTENCE, eventually modified by the functions."
       (progn
 	(let ((result sentence))
 	  (dolist (func greader-after-get-sentence-functions result)
-	    (setq result (funcall func result))
-	    (unless result
-	      (setq result sentence)))
+	    (when (fboundp func)
+	      (setq result (funcall func result))
+	      (unless result
+		(setq result sentence))))
 	  (if (not result)
 	      sentence
 	    result)))
