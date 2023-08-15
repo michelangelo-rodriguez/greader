@@ -64,10 +64,10 @@ When called interactively, this function reads a string from the minibuffer prov
   "Back-end main function of greader-mac.
 COMMAND must be a string suitable for `make-process'."
   (pcase command
-    ('get-text
-     (greader-mac-get-sentence))
-    ('next-text
-     (greader-mac-forward-sentence))
+    ;; ('get-text
+    ;;  (greader-mac-get-sentence))
+    ;; ('next-text
+    ;;  (greader-mac-forward-sentence))
     ('executable
      greader-mac-executable-name)
     ('lang
