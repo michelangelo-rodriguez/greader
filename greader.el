@@ -114,6 +114,8 @@ If all the functions in the hook return nil, this function return
 	      (setq flag t)))
 	  flag))
     nil))
+(defvar greader-after-stop-hook nil
+  "The functions in this variable are executed just after tts is stopped.")
 
 (defgroup
   greader
@@ -546,7 +548,8 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
 	(greader-reset-elapsed-time))
     (setq-local greader-stop-timer 0)))
   (greader-set-greader-keymap)
-  (greader-tts-stop))
+  (greader-tts-stop)
+  (run-hooks 'greader-after-stop-hook))
 
 (defun greader-debug (arg)
   "Used to get some fast debugging.
