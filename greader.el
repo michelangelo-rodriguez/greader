@@ -288,6 +288,22 @@ if set to t, when you call function `greader-read', that function sets a
   :keymap greader-reading-map
   :lighter "reading...")
 
+(defun set-bookmark-for-greader ()
+  "Imposta il segnalibro ad ogni interruzione della lettura."
+  (when buffer-file-name
+    (let ((inhibit-message t))
+      (bookmark-set (buffer-name)))))
+
+(define-minor-mode greader-auto-bookmark-mode
+  "Enable automatic bookmarking.
+Each time the reading of the buffer is stopped a bookmark is saved
+when the buffer is visiting a file."
+  :lighter "bk"
+  :global t
+  (if greader-auto-bookmark-mode
+      (add-hook 'greader-after-stop-hook 'set-bookmark-for-greader)
+    (remove-hook 'greader-after-stop-hook 'set-bookmark-for-greader)))
+
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
   (when greader-use-prefix
