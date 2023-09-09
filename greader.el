@@ -6,7 +6,7 @@
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
 ;; Keywords: tools, accessibility
 
-;; Version: 0.1
+;; Version: 0.2
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -273,7 +273,7 @@ if set to t, when you call function `greader-read', that function sets a
     (define-key map (kbd "<right>")   #'greader-forward)
     map))
 
-					;###autoload
+;;;###autoload
 (define-minor-mode greader-mode
   nil
   :lighter " greader"
@@ -293,7 +293,7 @@ if set to t, when you call function `greader-read', that function sets a
   (when buffer-file-name
     (let ((inhibit-message t))
       (bookmark-set (buffer-name)))))
-
+;;;###autoload
 (define-minor-mode greader-auto-bookmark-mode
   "Enable automatic bookmarking.
 Each time the reading of the buffer is stopped a bookmark is saved
@@ -951,8 +951,7 @@ In general you should specify an alternative path for espeak voice
   :tag "greader compile extra parameters"
   :type '(repeat :tag "extra parameter" string))
 
-					;###autoload
-
+;;;###autoload
 (defcustom greader-compile-dictsource nil
   "Location of espeak dictionary source data.
 You must configure this variable in order to use
