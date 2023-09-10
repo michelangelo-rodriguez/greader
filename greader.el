@@ -6,7 +6,7 @@
 ;; Author: Michelangelo Rodriguez <michelangelo.rodriguez@gmail.com>
 ;; Keywords: tools, accessibility
 
-;; Version: 0.2
+;; Version: 0.2.1
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -281,7 +281,7 @@ if set to t, when you call function `greader-read', that function sets a
   (cond
    (greader-mode
     (greader-load-backends))))
-
+;;;###autoload
 (define-minor-mode greader-reading-mode
   nil
   :interactive nil
