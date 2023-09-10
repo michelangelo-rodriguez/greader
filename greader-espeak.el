@@ -45,7 +45,7 @@ LANG must be recognized by espeak or espeak-ng."
     (progn
       (setq-local greader-espeak-language lang)
       (concat "-v " lang))))
-
+;;;###autoload
 (defun greader-espeak (command &optional arg &rest _)
   "Back-end main function of greader-espeak.
 COMMAND must be a string suitable for `make-process'."
