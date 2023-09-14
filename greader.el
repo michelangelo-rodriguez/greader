@@ -696,12 +696,12 @@ buffer, so if you want to set it globally, please use `m-x
   (interactive)
   (if (not (greader-call-backend 'punctuation))
       (progn
-	(greader-stop)
+	(greader-tts-stop)
 	(greader-set-punctuation 'yes)
 	(message "punctuation enabled in current buffer")
 	(greader-read))
     (progn
-      (greader-stop)
+      (greader-tts-stop)
       (greader-set-punctuation 'no)
       (message "punctuation disabled in current buffer")
       (greader-read))))
@@ -967,7 +967,7 @@ If prefix, it will be used to increment by that.  Default is N=10."
   (interactive "P")
   (if (not n)
       (setq n 10))
-  (greader-stop)
+  (greader-tts-stop)
   (greader-set-rate (+ (greader-call-backend 'rate 'value) n))
   (greader-read))
 
@@ -977,7 +977,7 @@ If prefix, it will be used to decrement  rate."
   (interactive "P")
   (if (not n)
       (setq n 10))
-  (greader-stop)
+  (greader-tts-stop)
   (greader-set-rate (- (greader-call-backend 'rate 'value) n))
   (greader-read))
 
@@ -1215,7 +1215,7 @@ So you can use this command like a player, if you press <left> you
   (when greader--timer-backward
     (cancel-timer greader--timer-backward)
     (setq greader--timer-backward nil))
-  (greader-stop)
+  (greader-tts-stop)
   (backward-sentence)
   (greader-set-register)
   (setq greader--marker-backward (point))
@@ -1227,7 +1227,7 @@ So you can use this command like a player, if you press <left> you
   (interactive)
   (when (eobp)
     (signal 'end-of-buffer nil))
-  (greader-stop)
+  (greader-tts-stop)
   (greader-forward-sentence)
   (greader-set-register)
   (greader-read))
