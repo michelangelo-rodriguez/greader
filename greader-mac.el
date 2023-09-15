@@ -1,6 +1,10 @@
 ;;; greader.el --- gnamù reader, send buffer contents to a speech engine. -*- lexical-binding: t; -*-
+;; FIXME: The above line is not right for this file :-(
 
 ;; Copyright (C) 2017-2023  Free Software Foundation, Inc.
+
+;;; Code:
+
 (defgroup greader-mac
   nil
   "Back-end of mac for greader."
@@ -37,27 +41,14 @@ nil means to use the system voice."
 
 (defun greader-mac-set-voice (voice)
   "Set specified VOICE for `say'.
-When called interactively, this function reads a string from the minibuffer providing completion."
+When called interactively, this function reads a string from the minibuffer
+providing completion."
   (interactive
-   (list (read-string "voice: " nil nil (greader--mac-get-voices))))
-  (let (result)
-    (if (called-interactively-p 'any)
-	(progn
-	  (if (string-equal "system" voice)
-	      (setq-local greader-mac-voice nil)
-	    (setq-local greader-mac-voice voice)))
-      (when voice
-	(if (string-equal voice "system")
-	    (progn
-	      (setq result nil)
-	      (setq-local greader-mac-voice nil))
-	  (setq result (concat "-v" voice))
-	  (setq-local greader-mac-voice voice)))
-      (unless voice
-	(if greader-mac-voice
-	    (setq result (concat "-v" greader-mac-voice))
-	  (setq result nil)))
-      result)))
+   (list (read-string "Voice: " nil nil (greader--mac-get-voices))))
+  (when voice
+    (setq-local greader-mac-voice
+                (if (string-equal "system" voice) nil voice)))
+  (when greader-mac-voice (concat "-v" greader-mac-voice)))
 
 ;;;###autoload
 (defun greader-mac (command &optional arg &rest _)
@@ -87,25 +78,21 @@ COMMAND must be a string suitable for `make-process'."
 (put 'greader-mac 'greader-backend-name "greader-mac")
 
 (defun greader-mac-get-sentence ()
-  (let ((sentence-start (make-marker)))
-    (setq sentence-start (point))
+  (let ((sentence-start (point)))
     (save-excursion
-      (when (not (eobp))
-	(if (not (re-search-forward greader-mac-end-of-sentence-regexp nil t))
-	    (end-of-buffer))
+      (greader-mac-forward-sentence)
       (if (> (point) sentence-start)
 	  (string-trim (buffer-substring-no-properties sentence-start (point)) "[ \t\n\r]+")
-	nil)))))
+	nil))))
 
 (defun greader-mac-forward-sentence ()
-  (if (not (re-search-forward greader-mac-end-of-sentence-regexp nil t))
-      (end-of-buffer)))
+  (re-search-forward greader-mac-end-of-sentence-regexp nil 'move))
 
 (defun greader--mac-get-voices ()
   "Return a list which contains all voices suitable for this backend."
   (with-temp-buffer
     (call-process "say" nil t nil "-v" "?")
-    (beginning-of-buffer)
+    (goto-char (point-min))
     (let ((lines (list "system")))
       (while (not (eobp))
 	(let ((mymarker (make-marker)))
