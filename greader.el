@@ -140,7 +140,7 @@ If all the functions in the hook return nil, this function return
 
 (defcustom
   greader-current-backend
-  'greader-espeak
+  #'greader-espeak
   "Greader back-end to use."
   :tag "greader current back-end"
   :type
@@ -305,8 +305,8 @@ when the buffer is visiting a file."
   :lighter "bk"
   :global t
   (if greader-auto-bookmark-mode
-      (add-hook 'greader-after-stop-hook 'set-bookmark-for-greader)
-    (remove-hook 'greader-after-stop-hook 'set-bookmark-for-greader)))
+      (add-hook 'greader-after-stop-hook #'set-bookmark-for-greader)
+    (remove-hook 'greader-after-stop-hook #'set-bookmark-for-greader)))
 ;; greader-region-mode is a non-interactive minor mode that deals with
 ;; read the active region instead of the entire buffer.
 ;; The current implementation of greader probably dictates that the
@@ -357,11 +357,11 @@ This only happens if the variables `greader-start-region' and
 	(setq greader-start-region (region-beginning))
 	(setq greader-end-region (region-end))
 	(greader-narrow)
-	(add-hook 'greader-after-stop-hook 'greader-widen)
-	(add-hook 'greader-before-finish-functions 'greader-widen)
+	(add-hook 'greader-after-stop-hook #'greader-widen)
+	(add-hook 'greader-before-finish-functions #'greader-widen)
 	(greader-set-point-to-start-of-region))
-    (remove-hook 'greader-before-finish-functions 'greader-widen)
-    (remove-hook 'greader-after-stop-hook 'greader-widen)))
+    (remove-hook 'greader-before-finish-functions #'greader-widen)
+    (remove-hook 'greader-after-stop-hook #'greader-widen)))
 
 (defun greader-set-register ()
   "Set the `?G' register to the point in current buffer."
@@ -430,7 +430,7 @@ backends."
 
 (defun greader-load-backends ()
   "Load backends taken from `greader-backends'."
-  (mapcar 'require greader-backends))
+  (mapcar #'require greader-backends))
 
 (defun greader-read-asynchronous (txt)
   "Read the text given in TXT."
@@ -447,8 +447,8 @@ backends."
     (setq backend (append greader-backend `(,txt) backend))
     (and (stringp txt) (setq-local greader-synth-process (make-process
 							  :name "greader-backend"
-							  :sentinel 'greader-action
-							  :filter 'greader-process-filter
+							  :sentinel #'greader-action
+							  :filter #'greader-process-filter
 							  :command backend)))
     (if greader-debug
 	(progn
@@ -478,14 +478,14 @@ backends."
 
 (defun greader-tts-stop ()
   "Stop reading of current buffer."
-  (set-process-sentinel greader-synth-process 'greader--default-action)
+  (set-process-sentinel greader-synth-process #'greader--default-action)
   (if
       (not
        (eq
 	(greader-call-backend 'stop) 'not-implemented))
       (greader-call-backend 'stop))
   (delete-process greader-synth-process)
-  (setq-local greader-backend-action 'greader--default-action))
+  (setq-local greader-backend-action #'greader--default-action))
 
 (defun greader--default-action (&optional _process event)
   "Internal use.
@@ -611,7 +611,7 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
 	  (setq-local greader-backend-action #'greader-next-action)
 	  (greader-read-asynchronous chunk))
       (progn
-	(setq-local greader-backend-action 'greader--default-action)
+	(setq-local greader-backend-action #'greader--default-action)
 	(greader-set-greader-keymap)
 	(unless (greader--call-before-finish-functions)
 	  (greader-read-asynchronous ". end"))))))
@@ -763,8 +763,9 @@ Optional argument TIMER-IN-MINS timer in minutes (integer)."
   (catch 'timer-is-nil
     (cond
      ((greader-timer-flag-p)
-      (setq-local greader-stop-timer (run-at-time (- (greader-convert-mins-to-secs greader-timer) greader-elapsed-time) nil 'greader-stop-timer-callback))
-      (setq-local greader-elapsed-timer (run-at-time 1 1 'greader-elapsed-time)))
+      (setq-local greader-stop-timer (run-at-time (- (greader-convert-mins-to-secs greader-timer) greader-elapsed-time) nil #'greader-stop-timer-callback))
+      (setq-local greader-elapsed-timer
+                  (run-at-time 1 1 #'greader-elapsed-time)))
      ((not (greader-timer-flag-p))
       (throw 'timer-is-nil nil))))
   t)
@@ -810,7 +811,7 @@ time elapsed before you stopped."
       (greader-setup-tired-timer))
   (cond
    ((greader-soft-timer-p)
-    (setq-local greader-backend-action 'greader--default-action))
+    (setq-local greader-backend-action #'greader--default-action))
    ((not greader-soft-timer)
     (greader-stop))))
 
@@ -863,11 +864,12 @@ Enabling tired mode implicitly enables timer also."
        (time-add
 	(current-idle-time)
 	(seconds-to-time
-	 greader-tired-time)) nil 'greader-tired-mode-callback)))
+	 greader-tired-time))
+       nil #'greader-tired-mode-callback)))
 
 (defun greader-tired-mode-callback ()
   "Not documented, internal use."
-  (if (equal last-command 'greader-read)
+  (if (equal last-command #'greader-read)
       (greader-move-to-last-point)))
 
 (defun greader-move-to-last-point ()
@@ -880,11 +882,13 @@ Enabling tired mode implicitly enables timer also."
       (progn
 	(if (not greader-tired-flag)
 	    (greader-toggle-tired-mode))
-	(setq-local greader-auto-tired-timer(run-at-time nil 1 'greader-auto-tired-callback)))
+	(setq-local greader-auto-tired-timer
+	            (run-at-time nil 1 #'greader-auto-tired-callback)))
     (progn
       (if greader-tired-flag
 	  (greader-toggle-tired-mode))
-      (setq-local greader-auto-tired-timer (cancel-timer greader-auto-tired-timer)))))
+      (setq-local greader-auto-tired-timer
+                  (cancel-timer greader-auto-tired-timer)))))
 
 (defun greader-toggle-auto-tired-mode-flag ()
   "Not documented, internal use."
@@ -927,7 +931,7 @@ In this mode, greader will enter in tired mode at a customizable time
     (setcar (cdr (cdr current-t)) counter)
     (setcar current-t 0)
     (setcar (cdr current-t) 0)
-    (apply 'encode-time current-t)))
+    (apply #'encode-time current-t)))
 
 (defun greader-current-time-in-interval-p (time1 time2)
   "Not documented, internal use."
@@ -1038,11 +1042,11 @@ administrator."
 	(unless greader-compile-dictsource
 	  (error "Please set or customize `greader-compile-dictsource'
     to define espeak-ng dictionary source location"))
-	(add-hook 'after-save-hook 'greader-check-visited-file)
+	(add-hook 'after-save-hook #'greader-check-visited-file)
 	(message "greader-compile minor mode enabled"))
-    (when (member 'greader-check-visited-file after-save-hook)
+    (when (member #'greader-check-visited-file after-save-hook)
       (message "greader-compile mode disabled")
-      (remove-hook 'after-save-hook 'greader-check-visited-file))))
+      (remove-hook 'after-save-hook #'greader-check-visited-file))))
 
 (defvar greader-compile-history nil)
 (defun greader-compile (&optional lang)
@@ -1092,7 +1096,7 @@ function is specifically designed to be executed by a hook."
 
       (make-process
        :name "greader-espeak"
-       :filter 'greader-compile--filter
+       :filter #'greader-compile--filter
        :command command))))
 
 (defun greader-compile--filter (&optional process str)
