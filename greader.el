@@ -62,7 +62,9 @@
 (defvar greader-synth-process nil)
 (require 'seq)
 
-(defvar greader-before-get-sentence-functions nil
+(define-obsolete-variable-alias 'greader-before-get-sentence-functions
+  'greader-before-get-sentence-hook "2023")
+(defvar greader-before-get-sentence-hook nil
   "List of functions to run before getting a sentence.
 Functions in this variable don't receive arguments.")
 
@@ -95,7 +97,9 @@ Return SENTENCE, eventually modified by the functions."
 (defvar greader-after-read-hook nil
   "Execute code just after reading a sentence.")
 
-(defvar greader-before-finish-hook nil
+(define-obsolete-variable-alias 'greader-before-finish-hook
+  'greader-before-finish-functions "2023")
+(defvar greader-before-finish-functions nil
   "Code executed just after finishing reading of buffer.
 Functions in this hook should return non -nil if at least one function
   returns non-nil, meaning that reading of buffer continues.
@@ -105,10 +109,10 @@ If all the functions called return nil, reading finishes normally.")
   "Return t if at least one of the function return t.
 If all the functions in the hook return nil, this function return
   nil."
-  (if greader-before-finish-hook
+  (if greader-before-finish-functions
       (progn
 	(let ((flag nil) (result nil))
-	  (dolist (func greader-before-finish-hook)
+	  (dolist (func greader-before-finish-functions)
 	    (setq result (funcall func))
 	    (when result
 	      (setq flag t)))
@@ -354,9 +358,9 @@ This only happens if the variables `greader-start-region' and
 	(setq greader-end-region (region-end))
 	(greader-narrow)
 	(add-hook 'greader-after-stop-hook 'greader-widen)
-	(add-hook 'greader-before-finish-hook 'greader-widen)
+	(add-hook 'greader-before-finish-functions 'greader-widen)
 	(greader-set-point-to-start-of-region))
-    (remove-hook 'greader-before-finish-hook 'greader-widen)
+    (remove-hook 'greader-before-finish-functions 'greader-widen)
     (remove-hook 'greader-after-stop-hook 'greader-widen)))
 
 (defun greader-set-register ()
@@ -593,7 +597,7 @@ if `GOTO-MARKER' is t and if you pass a prefix to this
     (cond
      ((and (not greader-region-mode) (not (greader--active-region-p)))
       (greader-region-mode 1))))
-  (run-hooks greader-before-get-sentence-functions)
+  (run-hooks greader-before-get-sentence-hook)
   (let ((chunk (funcall greader-read-chunk-of-text)))
     (if chunk
 	(progn
@@ -644,7 +648,7 @@ Argument ARG is not used."
 (defun greader-get-sentence ()
   "Get current sentence.
 Before returning sentence, this function runs
-`greader-before-get-sentence-functions'
+`greader-before-get-sentence-hook'
 If at end of buffer, nil is returned."
   (let ((result (greader-call-backend 'get-text)))
     (if (stringp result)
