@@ -65,11 +65,11 @@
 (define-obsolete-variable-alias 'greader-before-get-sentence-functions
   'greader-before-get-sentence-hook "2023")
 (defvar greader-before-get-sentence-hook nil
-  "List of functions to run before getting a sentence.
+  "Hook run before getting a sentence.
 Functions in this variable don't receive arguments.")
 
 (defvar greader-after-get-sentence-functions nil
-  "Hook after getting a sentence.
+  "Hook run after getting a sentence.
 Functions in this hook take a string as argument, and should modify
   that string that contains the sentence that will be read.
 the function should return modified sentence, or nil if no operation
@@ -101,14 +101,13 @@ Return SENTENCE, eventually modified by the functions."
   'greader-before-finish-functions "2023")
 (defvar greader-before-finish-functions nil
   "Code executed just after finishing reading of buffer.
-Functions in this hook should return non -nil if at least one function
+Functions in this hook should return non-nil if at least one function
   returns non-nil, meaning that reading of buffer continues.
 If all the functions called return nil, reading finishes normally.")
 
 (defun greader--call-before-finish-functions ()
   "Return t if at least one of the function return t.
-If all the functions in the hook return nil, this function return
-  nil."
+If all the functions in the hook return nil, this function return nil."
   (if greader-before-finish-functions
       (progn
 	(let ((flag nil) (result nil))
@@ -119,7 +118,7 @@ If all the functions in the hook return nil, this function return
 	  flag))
     nil))
 (defvar greader-after-stop-hook nil
-  "The functions in this variable are executed just after tts is stopped.")
+  "Hook run just after tts is stopped.")
 
 (defgroup
   greader
@@ -208,9 +207,9 @@ Instead, the sentence will be read completely."
   :tag "enable debug"
   :type 'boolean)
 
-(defcustom   greader-hook nil
-  "Hook ran after mode activation.
-through this hook you can
+(defcustom   greader-hook nil ;; FIXME: Can't see where it's run!
+  "Hook run after mode activation.
+Through this hook you can
 customize your key definitions for greader, for example."
   :tag "greader-mode hook"
   :type 'hook)
@@ -381,8 +380,8 @@ This only happens if the variables `greader-start-region' and
     b))
 
 (defun greader-call-backend (command &optional arg)
-  "Call BACKEND passing it COMMAND and ARG.
-\(internal use!\)."
+  "Call backend passing it COMMAND and ARG.
+\(internal use!\)." ;; FIXME: Use "--" in the name, then.
 
   (if arg
       (funcall greader-current-backend command arg)
@@ -395,10 +394,9 @@ This only happens if the variables `greader-start-region' and
 (defvar greader-dissoc-buffer "*Dissociation*")
 (defvar greader-temp-function nil)
 (defun greader-change-backend (&optional backend)
-  "Change BACKEND used for actually read the buffer.
-If backend is
-specified, it changes to backend, else it cycles throwgh available
-backends."
+  "Change backend used for actually read the buffer.
+If BACKEND is non-nil, it changes to BACKEND, else it cycles through
+available backends."
   (interactive
    (list
     (if current-prefix-arg
@@ -675,10 +673,10 @@ Optional argument STRING contains the string passed to
 
 (defun greader-set-language (lang)
   "Set language of tts.
-LANG must be in ISO code, for example `en' for english or `fr' for
-french.  This function sets the language of tts local for current
-buffer, so if you want to set it globally, please use `m-x
-`customize-option' <RET> greader-language <RET>'."
+LANG must be in ISO code, for example `en' for English or `fr' for
+French.  This function sets the language of tts local for current
+buffer, so if you want to set it globally, please use
+`M-x customize-option RET greader-language RET'."
   (interactive
    (list
     (let (result)
